@@ -5,6 +5,7 @@
 ---
 
 ![Home page](https://surah2pages.madi.se/images/screenshot.png)
+![Manual edit](https://surah2pages.madi.se/images/manual-edit.png)
 
 ## 🧭 قائمة المحتويات
 

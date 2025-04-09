@@ -1,3 +1,5 @@
+/* style.css - Updated with dropdown styles */
+
 :root {
     --primary-color: #0d6e6e;
     --primary-hover: #0a5656;
@@ -74,7 +76,8 @@ label {
 }
 
 input[type="text"],
-input[type="file"] {
+input[type="file"],
+select {
     width: 100%;
     padding: 12px 15px;
     border-radius: var(--border-radius);
@@ -82,10 +85,13 @@ input[type="file"] {
     font-family: 'Tajawal', sans-serif;
     font-size: 16px;
     transition: all 0.3s ease;
+    /* Direction property */
+    direction: rtl; /* Ensure text is right-aligned */
 }
 
 input[type="text"]:focus,
-input[type="file"]:focus {
+input[type="file"]:focus,
+select:focus {
     outline: none;
     border-color: var(--primary-color);
     box-shadow: 0 0 0 2px rgba(13, 110, 110, 0.2);
@@ -434,4 +440,51 @@ li:hover {
     background-color: var(--accent-color);
     opacity: 0.8;
     border-right: 1px solid white;
+}
+
+/* NEW STYLES FOR THE SELECT ELEMENT (DROPDOWN) */
+select {
+    width: 100%;
+    padding: 12px 15px;
+    border-radius: var(--border-radius);
+    border: 1px solid var(--border-color);
+    font-family: 'Tajawal', sans-serif;
+    font-size: 16px;
+    color: var(--text-color); /* Match text color */
+    background-color: white; /* Match card background */
+    appearance: none; /* Remove default arrow */
+    -webkit-appearance: none; /* For Safari */
+    cursor: pointer;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23333'%3E%3Cpath d='M7 10l5 5 5-5z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: left 97% top 50%, 0 0;
+    background-size: 15px auto, 100%;
+    transition: all 0.3s ease;
+    direction: rtl; /* Ensure text is right-aligned */
+}
+
+select:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 2px rgba(13, 110, 110, 0.2);
+}
+/* Style the dropdown options */
+select option {
+    font-family: 'Tajawal', sans-serif;
+    font-size: 16px;
+    color: var(--text-color);
+    background-color: white;
+    padding: 8px 12px;
+    direction: rtl; /* Ensure text is right-aligned */
+}
+
+/* Styling for Qira'at options */
+select option[data-type="qiraat"] {
+    font-weight: bold; /* Make Qira'at names bold */
+}
+
+/* Styling for Rawat options */
+select option[data-type="rawi"] {
+    padding-right: 30px; /* Add indentation for Rawi options */
+    color: #777; /* Make Rawi names a bit lighter */
 }

@@ -1,0 +1,5 @@
+node_modules/    # If you're using Node.js modules
+.DS_Store       # macOS Finder metadata files
+*.log           # Log files
+/tmp/           # Temporary files
+*.mp3

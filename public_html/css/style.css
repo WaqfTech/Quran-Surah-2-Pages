@@ -488,3 +488,35 @@ select option[data-type="rawi"] {
     padding-right: 30px; /* Add indentation for Rawi options */
     color: #777; /* Make Rawi names a bit lighter */
 }
+
+/* Footer Styles */
+footer {
+    background-color: var(--light-gray);
+    padding: 20px 0;
+    text-align: center;
+    margin-top: 30px;
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow);
+    font-size: 0.9rem;
+}
+
+footer p {
+    margin: 0;
+    color: var(--text-color);
+}
+
+footer a {
+    color: var(--primary-color);
+    text-decoration: none;
+    font-weight: 500;
+    transition: color 0.3s ease;
+}
+
+footer a:hover {
+    color: var(--primary-hover);
+    text-decoration: underline;
+}
+
+.heart {
+    color: #e53935; /* Red heart color */
+}

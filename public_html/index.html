@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>تحديد صفحات السورة - أداة مساعدة للقرآن الكريم</title>
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700&family=Amiri:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+    <script src="timeline.js"></script>
+
+</head>
+<body>
+    <header>
+        <h1>أداة تحديد صفحات السورة</h1>
+        <div class="subtitle">لتيسير تحديد أوقات نهايات الصفحات في تلاوات القرآن الكريم</div>
+    </header>
+
+    <div class="container">
+        <div class="card">
+            <div class="form-group">
+                <label for="surahInput">اسم السورة</label>
+                <input type="text" id="surahInput" placeholder="أدخل اسم السورة مثل: البقرة، آل عمران">
+            </div>
+            
+            <div class="form-group">
+                <label>ملف الصوت</label>
+                <div class="file-input-wrapper">
+                    <label class="file-input-label" for="audioFile">
+                        اختر ملف الصوت الخاص بالسورة
+                        <span>امتدادات مدعومة: MP3, WAV, OGG</span>
+                    </label>
+                    <input type="file" id="audioFile" accept="audio/*">
+                </div>
+                <div class="file-name" id="fileName"></div>
+            </div>
+            
+            <div class="audio-container">
+                <audio id="audio" controls></audio>
+                <div class="time-display-container">
+                    <div class="current-time" id="currentTimeDisplay">00:00.000</div>
+                    <input type="range" id="audioSeeker" min="0" max="100" value="0" step="0.001" class="audio-seeker">
+                    <div class="duration" id="durationDisplay">00:00.000</div>
+                </div>
+            </div>
+            
+            <div class="success-message" id="successMessage">تم تحديد نهاية الصفحة بنجاح!</div>
+            
+            <div class="buttons-container">
+                <button id="markButton">
+                    تحديد نهاية الصفحة
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                    </svg>
+                </button>
+                <button id="exportButton">
+                    تصدير ملف CSV
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                    </svg>
+                </button>
+            </div>
+        </div>
+        
+        <div class="pages-section card">
+            <h3>الصفحات المحددة</h3>
+            <ul id="pageList">
+                <div class="empty-state">لم يتم تحديد أي صفحات بعد</div>
+            </ul>
+        </div>
+        <div id="timeline" class="timeline-bar"></div>
+
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>

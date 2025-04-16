@@ -1,89 +1,42 @@
-// time-editing.js
+// js/time-editing.js
 
-// Show time editor interface for a specific page
-function showTimeEditor(index) {
-    editingPageIndex = index;
-    const page = pages[index];
+// This file is now DEPRECATED as the editing functionality
+// has been moved inline into the page list in page-list-management.js
 
-    let editForm = document.getElementById('editTimeForm');
-    if (!editForm) {
-        editForm = document.createElement('div');
-        editForm.id = 'editTimeForm';
-        editForm.className = 'edit-time-form';
-        document.querySelector('.audio-container').after(editForm);
+console.warn("DEPRECATED: time-editing.js functionality is now inline within page-list-management.js. This file can be removed.");
+
+// Keeping the parseTimeToSeconds function in case it's needed elsewhere,
+// although it's not directly used by the new inline editing which uses number inputs.
+/*
+function parseTimeToSeconds(timeString) {
+    if (timeString === null || typeof timeString === 'undefined') return 0;
+    timeString = String(timeString); // Ensure it's a string
+
+    const parts = timeString.split(':');
+    let totalSeconds = 0;
+
+    try {
+        if (parts.length === 3) { // HH:MM:SS.mmm
+            const ssmmm = parts[2].split('.');
+            const ms = parseInt(ssmmm[1]?.padEnd(3, '0') || '0', 10);
+            totalSeconds = (parseInt(parts[0], 10) * 3600) + (parseInt(parts[1], 10) * 60) + parseInt(ssmmm[0], 10) + (ms / 1000);
+        } else if (parts.length === 2) { // MM:SS.mmm
+            const ssmmm = parts[1].split('.');
+            const ms = parseInt(ssmmm[1]?.padEnd(3, '0') || '0', 10);
+            totalSeconds = (parseInt(parts[0], 10) * 60) + parseInt(ssmmm[0], 10) + (ms / 1000);
+        } else if (parts.length === 1) { // SS.mmm or SSS
+             const ssmmm = parts[0].split('.');
+             const ms = parseInt(ssmmm[1]?.padEnd(3, '0') || '0', 10);
+             totalSeconds = parseInt(ssmmm[0], 10) + (ms / 1000);
+        }
+    } catch (e) {
+        console.error("Error parsing time string:", timeString, e);
+        return 0; // Return 0 on parsing error
     }
 
-    const time = page.time;
-    const minutes = Math.floor(time / 60);
-    const seconds = Math.floor(time % 60);
-    const milliseconds = Math.floor((time % 1) * 1000);
-
-    editForm.innerHTML = `
-        <span class="edit-time-label">تعديل زمن الصفحة ${page.page}:</span>
-        <div class="time-input-container">
-            <input type="number" class="time-input" id="editMinutes" min="0" value="${minutes}" />
-            <span class="time-separator">:</span>
-            <input type="number" class="time-input" id="editSeconds" min="0" max="59" value="${seconds}" />
-            <span class="time-separator">.</span>
-            <input type="number" class="time-input time-input-ms" id="editMilliseconds" min="0" max="999" value="${milliseconds}" />
-        </div>
-        <div class="time-edit-actions">
-            <button class="cancel-time-btn" id="cancelTimeEdit">إلغاء</button>
-            <button class="save-time-btn" id="saveTimeEdit">حفظ</button>
-        </div>
-    `;
-
-    editForm.classList.add('active');
-
-    document.getElementById('saveTimeEdit').addEventListener('click', saveTimeEdit);
-    document.getElementById('cancelTimeEdit').addEventListener('click', cancelTimeEdit);
-
-    document.getElementById('editMinutes').focus();
+    return isNaN(totalSeconds) ? 0 : Math.max(0, totalSeconds); // Return 0 if NaN, ensure non-negative
 }
+*/
 
-// Save edited time
-function saveTimeEdit() {
-    if (editingPageIndex === -1) return;
-
-    const minutes = parseInt(document.getElementById('editMinutes').value) || 0;
-    const seconds = parseInt(document.getElementById('editSeconds').value) || 0;
-    const milliseconds = parseInt(document.getElementById('editMilliseconds').value) || 0;
-
-    const newTime = minutes * 60 + seconds + (milliseconds / 1000);
-
-    pages[editingPageIndex].time = newTime;
-    pages[editingPageIndex].timeFormatted = formatTimeWithMs(newTime);
-
-    saveToLocalStorage();
-
-    rebuildPageList();
-
-    const editForm = document.getElementById('editTimeForm');
-    if (editForm) {
-        editForm.classList.remove('active');
-        setTimeout(() => {
-            editForm.remove();
-        }, 300);
-    }
-
-    editingPageIndex = -1;
-
-    const successMessage = document.getElementById('successMessage');
-    successMessage.textContent = 'تم تعديل الوقت بنجاح';
-    successMessage.style.display = 'block';
-    setTimeout(() => {
-        successMessage.style.display = 'none';
-    }, 2000);
-}
-
-// Cancel time editing
-function cancelTimeEdit() {
-    const editForm = document.getElementById('editTimeForm');
-    if (editForm) {
-        editForm.classList.remove('active');
-        setTimeout(() => {
-            editForm.remove();
-        }, 300);
-    }
-    editingPageIndex = -1;
-}
+// Functions showStartEndTimeEditor, saveStartEndTimeEdit, cancelStartEndTimeEdit are removed.
+// Variable localCurrentEditingIndex is removed.

@@ -1,0 +1,77 @@
+// js/timeline.js
+
+window.renderTimeline = function(audio, pagesArray) {
+    const timeline = document.getElementById("timeline");
+    const localAudio = audio || document.getElementById('audio');
+
+    // Clear timeline content and reset cursor
+    if (timeline) {
+        timeline.innerHTML = "";
+        timeline.style.cursor = 'default';
+    } else {
+        console.error("Timeline element not found.");
+        return;
+    }
+
+    // Basic checks for valid audio and data
+    if (!localAudio || isNaN(localAudio.duration) || localAudio.duration <= 0 || typeof pagesArray === 'undefined') {
+        console.log("Timeline render skipped: No audio/duration/pages data.");
+        return;
+    }
+
+    // Create a sorted copy for rendering segments in correct visual order
+    const sortedPages = [...pagesArray].sort((a, b) => a.startTime - b.time); // Sort by start time
+
+    if (sortedPages.length === 0) {
+        console.log("Timeline render skipped: No pages to render.");
+        return; // Nothing to render
+    }
+
+    timeline.style.cursor = 'pointer'; // Set cursor only if there's something to click
+    const duration = localAudio.duration;
+
+    sortedPages.forEach((page) => {
+        // Use the explicit start and end times from the page object
+        const start = page.startTime || 0;
+        const end = page.endTime || 0;
+
+        // Validate times before calculating percentages
+        if (isNaN(start) || isNaN(end) || start < 0 || end < start || start >= duration) {
+             console.warn(`Skipping invalid segment for page ${page.page} (Surah ${page.surahNumber}): start=${start}, end=${end}, duration=${duration}`);
+             return;
+        }
+
+        // Clamp end time to duration if it exceeds (can happen with edits)
+        const clampedEnd = Math.min(end, duration);
+
+        const segment = document.createElement("div");
+        segment.className = "timeline-segment"; // Use class from CSS
+
+        const startPct = (start / duration) * 100;
+        // Ensure width calculation uses clamped end time and is not negative
+        const widthPct = Math.max(0, ((clampedEnd - start) / duration) * 100);
+
+        // Final check on percentages before applying styles
+        if (isNaN(startPct) || isNaN(widthPct) || startPct > 100 || widthPct > 100 || widthPct < 0) {
+            console.warn(`Invalid percentage for page ${page.page}: startPct=${startPct}, widthPct=${widthPct}. Skipping segment.`);
+            return;
+        }
+
+        segment.style.left = `${startPct}%`;
+        segment.style.width = `${widthPct}%`;
+
+        // Add hover title
+        segment.title = `صفحة ${page.page} (سورة ${page.surahNumber})\n${page.startTimeFormatted} - ${page.endTimeFormatted}`;
+
+        // Click handler seeks to the START time of the segment
+        segment.addEventListener("click", () => {
+            if (localAudio) {
+                 localAudio.currentTime = start; // Seek to the start time of the segment
+                 // Optional: auto-play
+                 // localAudio.play().catch(e => console.error("Audio play failed:", e));
+            }
+        });
+
+        timeline.appendChild(segment);
+    });
+};

@@ -1,0 +1,346 @@
+// js/time-editing.js
+
+// Global variable to track the index being edited
+// Ensure this is declared *globally* (likely in app-initialization.js using window.editingPageIndex)
+// Let's use a local variable within this module/file scope for clarity,
+// assuming it doesn't NEED to be strictly global for other files.
+let localCurrentEditingIndex = -1;
+
+// Function to parse time string (MM:SS.mmm or similar) to seconds - Ensure it handles various inputs gracefully
+function parseTimeToSeconds(timeString) {
+    if (timeString === null || typeof timeString === 'undefined') return 0;
+    timeString = String(timeString); // Ensure it's a string
+
+    const parts = timeString.split(':');
+    let totalSeconds = 0;
+
+    try {
+        if (parts.length === 3) { // HH:MM:SS.mmm
+            const ssmmm = parts[2].split('.');
+            const ms = parseInt(ssmmm[1]?.padEnd(3, '0') || '0', 10);
+            totalSeconds = (parseInt(parts[0], 10) * 3600) + (parseInt(parts[1], 10) * 60) + parseInt(ssmmm[0], 10) + (ms / 1000);
+        } else if (parts.length === 2) { // MM:SS.mmm
+            const ssmmm = parts[1].split('.');
+            const ms = parseInt(ssmmm[1]?.padEnd(3, '0') || '0', 10);
+            totalSeconds = (parseInt(parts[0], 10) * 60) + parseInt(ssmmm[0], 10) + (ms / 1000);
+        } else if (parts.length === 1) { // SS.mmm or SSS
+             const ssmmm = parts[0].split('.');
+             const ms = parseInt(ssmmm[1]?.padEnd(3, '0') || '0', 10);
+             totalSeconds = parseInt(ssmmm[0], 10) + (ms / 1000);
+        }
+    } catch (e) {
+        console.error("Error parsing time string:", timeString, e);
+        return 0; // Return 0 on parsing error
+    }
+
+    return isNaN(totalSeconds) ? 0 : Math.max(0, totalSeconds); // Return 0 if NaN, ensure non-negative
+}
+
+
+// Show the new editor interface for start and end times
+function showStartEndTimeEditor(index) {
+    console.log(`Attempting to show editor for index: ${index}`); // Log entry
+
+    // Ensure global pages array exists and index is valid
+    if (typeof window.pages === 'undefined' || index < 0 || index >= window.pages.length) {
+        console.error(`Cannot show editor: Invalid index (${index}) or pages array not found/valid.`);
+        return;
+    }
+
+    // Call cancel first to ensure any previous editor/state is cleaned up
+    cancelStartEndTimeEdit();
+
+    localCurrentEditingIndex = index; // Store the index being edited locally
+    console.log(`showStartEndTimeEditor: localCurrentEditingIndex SET TO: ${localCurrentEditingIndex}`); // Log setting
+
+    const page = window.pages[index];
+    const audio = document.getElementById('audio');
+    const audioDuration = audio ? audio.duration : Infinity;
+    if (isNaN(audioDuration)) {
+        console.warn("Audio duration is NaN, validation against duration might be inaccurate.");
+    }
+
+    // Create the editor form dynamically
+    const editForm = document.createElement('div');
+    editForm.id = 'startEndTimeEditForm';
+    editForm.className = 'edit-time-form'; // Reuse existing class for basic styling
+
+    // Helper function to get time components
+    const getTimeComponents = (timeInSeconds) => {
+        const time = Math.max(0, timeInSeconds || 0);
+        const minutes = Math.floor(time / 60);
+        const seconds = Math.floor(time % 60);
+        const milliseconds = Math.floor((time % 1) * 1000);
+        return { minutes, seconds, milliseconds };
+    };
+
+    const startComponents = getTimeComponents(page.startTime);
+    const endComponents = getTimeComponents(page.endTime);
+
+    // Populate inner HTML
+    editForm.innerHTML = `
+        <span class="edit-time-label">تعديل أوقات صفحة ${page.page} (سورة ${page.surahNumber})</span>
+<div class="time-edit-container">
+    <!-- Start Time Fieldset -->
+    <fieldset class="time-edit-fieldset">
+        <legend class="time-legend">وقت البدء</legend>
+        <div class="time-input-group">
+            <div class="time-input-wrapper">
+                <label for="editStartMinutes" class="time-label">دقائق</label>
+                <input 
+                    type="number" 
+                    class="time-input" 
+                    id="editStartMinutes" 
+                    min="0" 
+                    value="${startComponents.minutes}" 
+                    aria-label="دقائق البدء" 
+                />
+            </div>
+            <span class="time-separator">:</span>
+            <div class="time-input-wrapper">
+                <label for="editStartSeconds" class="time-label">ثواني</label>
+                <input 
+                    type="number" 
+                    class="time-input" 
+                    id="editStartSeconds" 
+                    min="0" 
+                    max="59" 
+                    value="${startComponents.seconds}" 
+                    aria-label="ثواني البدء" 
+                />
+            </div>
+            <span class="time-separator">.</span>
+            <div class="time-input-wrapper">
+                <label for="editStartMilliseconds" class="time-label">أجزاء الثانية</label>
+                <input 
+                    type="number" 
+                    class="time-input time-input-ms" 
+                    id="editStartMilliseconds" 
+                    min="0" 
+                    max="999" 
+                    value="${startComponents.milliseconds}" 
+                    aria-label="أجزاء الثانية للبدء" 
+                />
+            </div>
+        </div>
+    </fieldset>
+
+    <!-- End Time Fieldset -->
+    <fieldset class="time-edit-fieldset">
+        <legend class="time-legend">وقت الانتهاء</legend>
+        <div class="time-input-group">
+            <div class="time-input-wrapper">
+                <label for="editEndMinutes" class="time-label">دقائق</label>
+                <input 
+                    type="number" 
+                    class="time-input" 
+                    id="editEndMinutes" 
+                    min="0" 
+                    value="${endComponents.minutes}" 
+                    aria-label="دقائق الانتهاء" 
+                />
+            </div>
+            <span class="time-separator">:</span>
+            <div class="time-input-wrapper">
+                <label for="editEndSeconds" class="time-label">ثواني</label>
+                <input 
+                    type="number" 
+                    class="time-input" 
+                    id="editEndSeconds" 
+                    min="0" 
+                    max="59" 
+                    value="${endComponents.seconds}" 
+                    aria-label="ثواني الانتهاء" 
+                />
+            </div>
+            <span class="time-separator">.</span>
+            <div class="time-input-wrapper">
+                <label for="editEndMilliseconds" class="time-label">أجزاء الثانية</label>
+                <input 
+                    type="number" 
+                    class="time-input time-input-ms" 
+                    id="editEndMilliseconds" 
+                    min="0" 
+                    max="999" 
+                    value="${endComponents.milliseconds}" 
+                    aria-label="أجزاء الثانية للانتهاء" 
+                />
+            </div>
+        </div>
+    </fieldset>
+</div>
+        <div class="time-edit-actions">
+            <button type="button" class="cancel-time-btn" id="cancelTimeEditBtn">إلغاء</button>
+            <button type="button" class="save-time-btn" id="saveTimeEditBtn">حفظ التعديلات</button>
+        </div>
+        <div id="editErrorMsg" class="edit-error-message" style="color: red; margin-top: 10px; text-align: center;"></div>
+    `;
+
+    // Insert the form into the DOM
+    const audioContainer = document.querySelector('.audio-container');
+    if (audioContainer && audioContainer.parentNode) {
+        audioContainer.parentNode.insertBefore(editForm, audioContainer.nextSibling);
+        editForm.classList.add('active'); // Make it visible
+        console.log(`Editor form for index ${index} inserted and activated.`);
+    } else {
+        console.error("Audio container not found, cannot insert edit form.");
+        localCurrentEditingIndex = -1; // Reset index if insertion failed
+        return;
+    }
+
+    // Add listeners to the new buttons inside the dynamically created form
+    const saveBtn = document.getElementById('saveTimeEditBtn');
+    const cancelBtn = document.getElementById('cancelTimeEditBtn');
+
+    if (saveBtn) {
+         saveBtn.addEventListener('click', () => {
+             // Log index value right before calling save function
+             console.log(`Save button CLICKED. localCurrentEditingIndex is: ${localCurrentEditingIndex}`);
+             saveStartEndTimeEdit(audioDuration);
+         });
+     } else { console.error("Save button not found in dynamic form."); }
+
+    if (cancelBtn) {
+         cancelBtn.addEventListener('click', cancelStartEndTimeEdit);
+     } else { console.error("Cancel button not found in dynamic form."); }
+
+
+    // Focus the first input for convenience
+    const startMinutesInput = document.getElementById('editStartMinutes');
+    if (startMinutesInput) {
+        startMinutesInput.focus();
+        startMinutesInput.select(); // Select text for easy replacement
+    }
+}
+
+// Save the edited start and end times
+function saveStartEndTimeEdit(audioDuration) {
+    // Log entry and current state
+    console.log(`saveStartEndTimeEdit ENTERED. localCurrentEditingIndex is: ${localCurrentEditingIndex}, typeof window.pages is: ${typeof window.pages}`);
+
+    // Check the index and pages array again
+    if (localCurrentEditingIndex === -1 || typeof window.pages === 'undefined' || localCurrentEditingIndex >= window.pages.length) {
+        console.error(`Save Error: Invalid index (${localCurrentEditingIndex}) or pages array missing/invalid.`);
+        // Optionally display error to user in the form
+        const errorMsgDiv = document.getElementById('editErrorMsg');
+         if (errorMsgDiv) errorMsgDiv.textContent = 'خطأ: حدث مشكلة أثناء محاولة حفظ البيانات. الرجاء المحاولة مرة أخرى.';
+        return;
+    }
+
+    const errorMsgDiv = document.getElementById('editErrorMsg');
+    if (errorMsgDiv) errorMsgDiv.textContent = ''; // Clear previous errors
+
+    // --- Read Start Time ---
+    const startMinutesInput = document.getElementById('editStartMinutes');
+    const startSecondsInput = document.getElementById('editStartSeconds');
+    const startMsInput = document.getElementById('editStartMilliseconds');
+    if (!startMinutesInput || !startSecondsInput || !startMsInput) {
+        console.error("Save Error: Could not find start time input elements.");
+        if (errorMsgDiv) errorMsgDiv.textContent = 'خطأ: لم يتم العثور على حقول وقت البدء.';
+        return;
+    }
+    const startMinutes = parseInt(startMinutesInput.value) || 0;
+    const startSeconds = parseInt(startSecondsInput.value) || 0;
+    const startMilliseconds = parseInt(startMsInput.value) || 0;
+    const newStartTime = (startMinutes * 60) + startSeconds + (startMilliseconds / 1000);
+
+    // --- Read End Time ---
+    const endMinutesInput = document.getElementById('editEndMinutes');
+    const endSecondsInput = document.getElementById('editEndSeconds');
+    const endMsInput = document.getElementById('editEndMilliseconds');
+     if (!endMinutesInput || !endSecondsInput || !endMsInput) {
+        console.error("Save Error: Could not find end time input elements.");
+        if (errorMsgDiv) errorMsgDiv.textContent = 'خطأ: لم يتم العثور على حقول وقت الانتهاء.';
+        return;
+    }
+    const endMinutes = parseInt(endMinutesInput.value) || 0;
+    const endSeconds = parseInt(endSecondsInput.value) || 0;
+    const endMilliseconds = parseInt(endMsInput.value) || 0;
+    const newEndTime = (endMinutes * 60) + endSeconds + (endMilliseconds / 1000);
+
+    // --- Validation ---
+    if (newStartTime < 0 || newEndTime < 0) {
+        if (errorMsgDiv) errorMsgDiv.textContent = 'خطأ: لا يمكن أن تكون الأوقات سالبة.';
+        return;
+    }
+    if (newEndTime < newStartTime) {
+        if (errorMsgDiv) errorMsgDiv.textContent = 'خطأ: وقت الانتهاء لا يمكن أن يكون قبل وقت البدء.';
+        return;
+    }
+    // Use the potentially updated audioDuration passed as argument
+    const currentAudioDuration = audioDuration || document.getElementById('audio')?.duration || Infinity;
+     if (!isNaN(currentAudioDuration) && currentAudioDuration !== Infinity && newEndTime > currentAudioDuration) {
+         const warningMsg = `تحذير: وقت الانتهاء (${formatTimeWithMs(newEndTime)}) يتجاوز مدة الملف الصوتي (${formatTimeWithMs(currentAudioDuration)}).`;
+         if (errorMsgDiv) errorMsgDiv.textContent = warningMsg;
+         console.warn(warningMsg);
+         // Allow saving but show warning. Could add a confirmation step here.
+     }
+
+    // --- Update the page object IN THE GLOBAL ARRAY ---
+    try {
+        const pageToUpdate = window.pages[localCurrentEditingIndex];
+        if (!pageToUpdate) {
+            throw new Error(`Page object at index ${localCurrentEditingIndex} is undefined.`);
+        }
+        pageToUpdate.startTime = newStartTime;
+        pageToUpdate.endTime = newEndTime;
+        pageToUpdate.startTimeFormatted = formatTimeWithMs(newStartTime);
+        pageToUpdate.endTimeFormatted = formatTimeWithMs(newEndTime);
+        console.log(`Updated page ${pageToUpdate.page} (Surah ${pageToUpdate.surahNumber}): Start=${pageToUpdate.startTimeFormatted}, End=${pageToUpdate.endTimeFormatted}`);
+    } catch (e) {
+         console.error("Error updating page object in array:", e);
+         if (errorMsgDiv) errorMsgDiv.textContent = 'خطأ فادح أثناء تحديث البيانات.';
+         return;
+    }
+
+
+    // Re-sort pages array
+     window.pages.sort((a, b) => {
+         if (a.surahNumber !== b.surahNumber) return a.surahNumber - b.surahNumber;
+         if (a.page !== b.page) return a.page - b.page;
+         return a.startTime - b.startTime;
+     });
+
+    // --- Update UI and Save ---
+    if (typeof saveToLocalStorage === 'function') saveToLocalStorage(); else console.error("Save Error: saveToLocalStorage not found");
+    if (typeof rebuildPageList === 'function') rebuildPageList(); else console.error("Save Error: rebuildPageList not found");
+
+    const audio = document.getElementById('audio');
+    if (audio && typeof window.renderTimeline === 'function') {
+        window.renderTimeline(audio, window.pages);
+    } else {
+         console.error("Save Error: renderTimeline or audio element not found");
+    }
+
+    // Close the editor form AFTER successful operations
+    cancelStartEndTimeEdit(); // This also resets localCurrentEditingIndex
+
+    // Show success message to user
+    const successMessage = document.getElementById('successMessage');
+    if (successMessage) {
+        const pageNum = window.pages[localCurrentEditingIndex]?.page || '?'; // Get page number safely
+        successMessage.textContent = `تم تعديل أوقات صفحة ${pageNum} بنجاح!`;
+        successMessage.style.display = 'block';
+        setTimeout(() => { successMessage.style.display = 'none'; }, 2500);
+    }
+    // Note: Index might have changed due to sorting, message might show wrong page # briefly.
+    // Better to get page number *before* sorting if message needs to be precise.
+
+}
+
+// Cancel time editing and remove the form
+function cancelStartEndTimeEdit() {
+    console.log(`Cancel called. Resetting localCurrentEditingIndex from ${localCurrentEditingIndex} to -1.`); // Log cancel
+    const editForm = document.getElementById('startEndTimeEditForm');
+    if (editForm) {
+        editForm.classList.remove('active');
+        // Use requestAnimationFrame or setTimeout to ensure removal happens after potential transitions
+        setTimeout(() => {
+             if (editForm.parentNode) {
+                editForm.parentNode.removeChild(editForm);
+                console.log("Editor form removed.");
+             }
+        }, 150); // Shorter delay might suffice if no long transitions
+    }
+    localCurrentEditingIndex = -1; // Reset editing index reliably
+}

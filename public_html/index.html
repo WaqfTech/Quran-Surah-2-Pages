@@ -6,107 +6,159 @@
     <title>تحديد صفحات السورة - أداة مساعدة للقرآن الكريم</title>
     <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700&family=Amiri:wght@400;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="css/style.css">
-    <script src="js/timeline.js"></script>
+    <!-- Scripts moved to the end of body for better performance -->
 </head>
 <body>
     <header>
         <h1>أداة تحديد صفحات السورة</h1>
-        <div class="subtitle">لتيسير تحديد أوقات نهايات الصفحات في تلاوات القرآن الكريم</div>
+        <div class="subtitle">لتيسير تحديد أوقات بدايات ونهايات الصفحات في تلاوات القرآن الكريم</div>
     </header>
     <div class="container">
         <div class="card">
            <div class="form-group">
-                <label for="surahSelect">اسم السورة</label>
+                <label for="surahSelect">السورة</label>
                 <select id="surahSelect">
                     <option value="">اختر سورة</option>
+                    <!-- Options populated by JS -->
                 </select>
             </div>
 
-            <div class="form-group">
-                <label for="reciterInput">اسم القارئ</label>
-                <input type="text" id="reciterInput" placeholder="أدخل اسم القارئ">
-            </div>
+            <!-- Reciter input will be dynamically added here by dropdowns.js -->
 
             <div class="form-group">
                 <label for="qiraatSelect">القراءة / الراوي</label>
                 <select id="qiraatSelect">
-                    <option value="">اختر القراءة / الراوي</option>
+                    <option value="">اختر القراءة / الراوي (اختياري)</option>
+                     <!-- Options populated by JS -->
                 </select>
             </div>
-            
+
             <div class="form-group">
                 <label>ملف الصوت</label>
                 <div class="file-input-wrapper">
                     <label class="file-input-label" for="audioFile">
                         اختر ملف الصوت الخاص بالسورة
-                        <span>امتدادات مدعومة: MP3, WAV, OGG</span>
+                        <span>امتدادات مدعومة: MP3, WAV, OGG, M4A</span>
                     </label>
                     <input type="file" id="audioFile" accept="audio/*">
                 </div>
-                <div class="file-name" id="fileName"></div>
+                <div class="file-name" id="fileName">لم يتم تحميل ملف صوتي</div>
             </div>
-            
-            <div class="audio-container">
-                <audio id="audio" controls></audio>
-                <div class="time-display-container">
-                    <div class="current-time" id="currentTimeDisplay">00:00.000</div>
-                    <input type="range" id="audioSeeker" min="0" max="100" value="0" step="0.001" class="audio-seeker">
-                    <div class="duration" id="durationDisplay">00:00.000</div>
+
+            <!-- Player Section -->
+            <div class="audio-player-section">
+                <div id="audioInfoDisplay" class="audio-info-display">
+                    <!-- Info populated by JS -->
+                    <span>الرجاء تحميل ملف صوتي واختيار البيانات</span>
+                </div>
+                <div class="audio-container">
+                    <audio id="audio" controls></audio>
+                     <div class="time-controls-container">
+                        <!-- Seek Buttons -->
+                        <div class="seek-buttons">
+                            <button id="seekBackward10" class="seek-button" title="رجوع 10 ثواني" aria-label="رجوع 10 ثواني">
+                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path d="M8.447 14.043a1 1 0 01-1.414 0l-4.243-4.242a1 1 0 010-1.414L7.033 4.144a1 1 0 011.414 1.414L5.121 8.89H12.5a1 1 0 110 2H5.121l3.326 3.327a1 1 0 010 1.414z M11.757 4.144a1 1 0 011.414 0l4.243 4.242a1 1 0 010 1.414l-4.243 4.243a1 1 0 11-1.414-1.414L14.879 10.89H12.5a1 1 0 010-2h2.379l-3.122-3.122a1 1 0 010-1.414z"/></svg> -10s
+                            </button>
+                            <button id="seekBackward5" class="seek-button" title="رجوع 5 ثواني" aria-label="رجوع 5 ثواني">
+                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M7.707 14.707a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 1.414L5.414 9H12.5a1 1 0 110 2H5.414l2.293 2.293a1 1 0 010 1.414z" clip-rule="evenodd"/></svg> -5s
+                            </button>
+                        </div>
+                         <!-- Time Display & Seeker -->
+                        <div class="time-display-container">
+                             <div class="current-time" id="currentTimeDisplay">00:00.000</div>
+                             <input type="range" id="audioSeeker" min="0" max="100" value="0" step="0.01" class="audio-seeker" aria-label="شريط تمرير الصوت">
+                             <div class="duration" id="durationDisplay">00:00.000</div>
+                         </div>
+                          <!-- Seek Buttons -->
+                         <div class="seek-buttons">
+                            <button id="seekForward5" class="seek-button" title="تقديم 5 ثواني" aria-label="تقديم 5 ثواني">
+                                +5s <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M12.293 5.293a1 1 0 011.414 0l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414-1.414L14.586 11H7.5a1 1 0 110-2h7.086l-2.293-2.293a1 1 0 010-1.414z" clip-rule="evenodd"/></svg>
+                            </button>
+                            <button id="seekForward10" class="seek-button" title="تقديم 10 ثواني" aria-label="تقديم 10 ثواني">
+                                +10s <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path d="M11.553 5.957a1 1 0 011.414 0l4.243 4.243a1 1 0 010 1.414l-4.243 4.243a1 1 0 11-1.414-1.414L14.879 11.11H7.5a1 1 0 110-2h7.379l-3.326-3.327a1 1 0 010-1.414z M8.243 15.856a1 1 0 01-1.414 0L2.586 11.613a1 1 0 010-1.414l4.243-4.243a1 1 0 111.414 1.414L5.121 10.48H7.5a1 1 0 110 2H5.121l3.122 3.123a1 1 0 010 1.414z"/></svg>
+                            </button>
+                        </div>
+                    </div>
                 </div>
             </div>
-            
-            <div class="success-message" id="successMessage">تم تحديد نهاية الصفحة بنجاح!</div>
-            
+            <!-- End Player Section -->
+
+
+             <!-- Container for dynamically generated page MARKING buttons -->
+             <div id="pageMarkingContainer" class="page-buttons-container">
+                <p>الرجاء اختيار السورة لعرض أزرار تحديد الصفحات.</p>
+            </div>
+
+            <!-- Success message area -->
+            <div class="success-message" id="successMessage"></div>
+
+            <!-- Main action buttons -->
             <div class="buttons-container">
-                <button id="markButton">
-                    تحديد نهاية الصفحة
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
-                    </svg>
-                </button>
-                <button id="exportButton">
-                    تصدير ملف CSV
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                 <!-- Renamed Export button for CSV -->
+                <button id="exportCsvButton">
+                    تصدير CSV
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" width="18" height="18">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
                     </svg>
                 </button>
-                <button id="importButton">
-                    استيراد الإعدادات
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" width="18" height="18">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 12l4-4m-4 4l4 4" />
-                    </svg>
+                 <!-- Added Export button for JSON Settings -->
+                 <button id="exportJsonButton">
+                     تصدير الإعدادات (JSON)
+                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" width="18" height="18">
+                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
+                     </svg>
+                 </button>
+                <button id="importButton"> <!-- This button now imports JSON settings -->
+                    استيراد الإعدادات (JSON)
+                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" width="18" height="18">
+                         <path fill-rule="evenodd" d="M4.5 2A1.5 1.5 0 003 3.5v13A1.5 1.5 0 004.5 18h11a1.5 1.5 0 001.5-1.5V7.621a1.5 1.5 0 00-.44-1.06l-4.12-4.122A1.5 1.5 0 0011.378 2H4.5zm4.75 8.75a.75.75 0 00-1.5 0v2.546l-.928-.928a.75.75 0 00-1.06 1.06l2.25 2.25a.75.75 0 001.06 0l2.25-2.25a.75.75 0 10-1.06-1.06l-.928.928V10.75z" clip-rule="evenodd" />
+                     </svg>
                 </button>
+                 <!-- Reset button will be added dynamically by reset.js -->
             </div>
         </div>
-        
+
+        <!-- Section to display the list of pages for the selected Surah -->
         <div class="pages-section card">
-            <h3>الصفحات المحددة</h3>
+            <h3>صفحات السورة المحددة</h3>
             <ul id="pageList">
-                <div class="empty-state">لم يتم تحديد أي صفحات بعد</div>
+                <div class="empty-state">اختر سورة لعرض صفحاتها</div>
             </ul>
         </div>
-        <div id="timeline" class="timeline-bar"></div>
+
+        <!-- Timeline visualization -->
+        <div id="timeline" class="timeline-bar" aria-label="الجدول الزمني الصوتي">
+             <!-- Segments and Page Numbers populated by JS -->
+        </div>
 
     </div>
 
     <footer>
         <p>
-            طور هذا الموقع بـ  <span class="heart">❤</span> بواسطة <a href="https://madi.se" target="_blank" rel="noopener noreferrer">Madi.se</a>
+            طور هذا الموقع بـ <span class="heart">❤</span> بواسطة <a href="https://madi.se" target="_blank" rel="noopener noreferrer">Madi.se</a>
         </p>
     </footer>
 
+    <!-- Load Data Files First -->
     <script src="js/surah-data.js"></script>
     <script src="js/qiraat-data.js"></script>
-    <script src="js/dropdowns.js"></script>
-    <script src="js/app-initialization.js"></script>
+
+    <!-- Load Helper/Component Scripts -->
+    <script src="js/audio-handling.js"></script> <!-- Contains formatTimeWithMs, seekAudio -->
+    <script src="js/dropdowns.js"></script> <!-- Contains updateAudioInfoDisplay call -->
     <script src="js/local-storage.js"></script>
-    <script src="js/audio-handling.js"></script>
-    <script src="js/page-list-management.js"></script>
-    <script src="js/time-editing.js"></script>
-    <script src="js/exportSetting.js"></script>
-    <script src="js/csv-export.js"></script>
-    <script src="js/reset.js"></script>
-    <script src="js/timeline.js"></script>
+    <script src="js/page-list-management.js"></script> <!-- Contains rebuildPageList -->
+    <!-- time-editing.js is DEPRECATED -->
+    <script src="js/csv-export.js"></script> <!-- Contains CSV export and JSON import, calls updateAudioInfoDisplay on import -->
+    <script src="js/exportSetting.js"></script> <!-- Contains JSON export -->
+    <script src="js/reset.js"></script> <!-- Calls updateAudioInfoDisplay on reset -->
+    <script src="js/timeline.js"></script> <!-- Contains renderTimeline -->
+
+    <!-- Load the Dynamic Button Logic -->
+    <script src="js/dynamic-page-buttons.js"></script> <!-- Generates marking buttons -->
+
+    <!-- Load Main Initialization Script Last -->
+    <script src="js/app-initialization.js"></script> <!-- Sets up everything, attaches seek button listeners -->
+
 </body>
 </html>

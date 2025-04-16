@@ -1,0 +1,160 @@
+// js/page-list-management.js
+
+// Rebuild entire page list from saved data
+function rebuildPageList() {
+    const pageList = document.getElementById('pageList');
+    if (!pageList) return;
+
+    // Ensure global `pages` array exists
+    if (typeof pages === 'undefined') {
+        console.error("rebuildPageList: `pages` array is not defined.");
+        pageList.innerHTML = '<div class="empty-state">خطأ: بيانات الصفحات غير متاحة.</div>';
+        return;
+    }
+
+    if (pages.length === 0) {
+        pageList.innerHTML = '<div class="empty-state">لم يتم تحديد أي صفحات بعد</div>';
+        return;
+    }
+
+    pageList.innerHTML = ''; // Clear previous list
+    // Ensure pages are sorted for display consistency (by Surah then Page Number)
+     pages.sort((a, b) => {
+         if (a.surahNumber !== b.surahNumber) return a.surahNumber - b.surahNumber;
+         return a.page - b.page;
+     });
+
+
+    pages.forEach((page, index) => {
+        const li = document.createElement('li');
+        // Display Surah number if multiple Surahs might be in the list
+        const surahInfo = `سورة ${page.surahNumber}`; // Add more detail if needed
+
+        li.innerHTML = `
+            <div class="page-info">
+                <span class="page-number">${page.page}</span>
+                 <!-- Optional: Show Surah info -->
+                 <!-- <span class="page-surah-info">${surahInfo}</span> -->
+            </div>
+            <div class="time-display">
+                 <!-- Display Start and End Time -->
+                <span class="time-value start-time" title="وقت البدء">${page.startTimeFormatted || 'N/A'}</span>
+                <span class="time-separator"> - </span>
+                <span class="time-value end-time" title="وقت الانتهاء">${page.endTimeFormatted || 'N/A'}</span>
+
+                <!-- Edit Button: Triggers the new editor -->
+                <button class="edit-button" data-index="${index}" title="تعديل أوقات هذه الصفحة">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                         <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                         <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                    </svg>
+                </button>
+                 <!-- Delete Button -->
+                <button class="delete-btn" data-page="${page.page}" data-surah="${page.surahNumber}" title="حذف علامة هذه الصفحة">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M3 6h18"></path>
+                        <path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6"></path>
+                        <path d="M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2"></path>
+                        <line x1="10" y1="11" x2="10" y2="17"></line>
+                        <line x1="14" y1="11" x2="14" y2="17"></line>
+                    </svg>
+                </button>
+            </div>
+        `;
+        pageList.appendChild(li);
+    });
+
+    // Add event listeners after creating all elements
+    attachListButtonListeners();
+}
+
+// Function to attach listeners to buttons in the list
+function attachListButtonListeners() {
+    document.querySelectorAll('.delete-btn').forEach(btn => {
+        // Remove existing listener before adding new one
+        btn.removeEventListener('click', handleDeleteClick);
+        btn.addEventListener('click', handleDeleteClick);
+    });
+
+    document.querySelectorAll('.edit-button').forEach(btn => {
+         // Remove existing listener
+         btn.removeEventListener('click', handleEditClick);
+        btn.addEventListener('click', handleEditClick);
+    });
+}
+
+// Handler for delete button click
+function handleDeleteClick(event) {
+    event.stopPropagation();
+    const button = event.currentTarget; // Use currentTarget for delegated events
+    const pageToDelete = parseInt(button.getAttribute('data-page'));
+    const surahToDelete = parseInt(button.getAttribute('data-surah')); // Get Surah number too
+    if (!isNaN(pageToDelete) && !isNaN(surahToDelete)) {
+        deletePage(pageToDelete, surahToDelete); // Pass Surah number for accurate deletion
+    } else {
+        console.error("Delete button missing page or surah data attribute.");
+    }
+}
+
+// Handler for edit button click
+function handleEditClick(event) {
+    event.stopPropagation();
+    const button = event.currentTarget;
+    const index = parseInt(button.getAttribute('data-index'));
+    if (!isNaN(index) && typeof showStartEndTimeEditor === 'function') {
+        showStartEndTimeEditor(index); // Call the NEW editor function
+    } else {
+         console.error("Edit button missing index or showStartEndTimeEditor function not found.");
+    }
+}
+
+
+// --- MODIFIED Delete a page marker ---
+function deletePage(pageNumber, surahNumber) {
+    // Find the index based on BOTH page and surah number for accuracy
+    const indexToDelete = pages.findIndex(p => p.page === pageNumber && p.surahNumber === surahNumber);
+
+    if (indexToDelete !== -1) {
+        console.log(`Deleting page ${pageNumber} for Surah ${surahNumber} at index ${indexToDelete}`);
+        // Remove from array
+        pages.splice(indexToDelete, 1);
+
+        // Update storage and list
+        if (typeof saveToLocalStorage === 'function') saveToLocalStorage();
+        if (typeof rebuildPageList === 'function') rebuildPageList(); else attachListButtonListeners(); // Rebuild or just reattach if rebuild fails
+
+        // Re-enable the corresponding dynamic button
+        const pageMarkingContainer = document.getElementById('pageMarkingContainer');
+        if (pageMarkingContainer) {
+            const buttonToEnable = pageMarkingContainer.querySelector(
+                `button.page-mark-button[data-page="${pageNumber}"][data-surah="${surahNumber}"]`
+            );
+            if (buttonToEnable) {
+                buttonToEnable.disabled = false;
+                buttonToEnable.classList.remove('marked');
+                buttonToEnable.title = '';
+                console.log(`Re-enabled button for Surah ${surahNumber}, Page ${pageNumber}`);
+            } else {
+                 console.warn(`Could not find button to re-enable for Surah ${surahNumber}, Page ${pageNumber}`);
+            }
+        }
+
+        // Update timeline
+        const audio = document.getElementById('audio');
+        if (audio && typeof window.renderTimeline === 'function') {
+            window.renderTimeline(audio, pages);
+        }
+
+        // Success message
+        const successMessage = document.getElementById('successMessage');
+        if (successMessage) {
+            successMessage.textContent = `تم حذف علامة صفحة ${pageNumber} (سورة ${surahNumber}) بنجاح`;
+            successMessage.style.display = 'block';
+            setTimeout(() => { successMessage.style.display = 'none'; }, 2000);
+        }
+    } else {
+         console.warn(`Could not find page ${pageNumber} for Surah ${surahNumber} to delete.`);
+    }
+}
+
+// updatePageList function is no longer needed as rebuildPageList handles updates.

@@ -1,0 +1,57 @@
+{
+  "pages": [
+    {
+      "page": 2,
+      "surahNumber": 2,
+      "startTime": 0,
+      "endTime": 54.555,
+      "startTimeFormatted": "00:00.000",
+      "endTimeFormatted": "00:54.555"
+    },
+    {
+      "page": 3,
+      "surahNumber": 2,
+      "startTime": 54.58,
+      "endTime": 200.682,
+      "startTimeFormatted": "00:54.580",
+      "endTimeFormatted": "03:20.682"
+    },
+    {
+      "page": 4,
+      "surahNumber": 2,
+      "startTime": 0,
+      "endTime": 361.008,
+      "startTimeFormatted": "00:00.000",
+      "endTimeFormatted": "06:01.008"
+    },
+    {
+      "page": 5,
+      "surahNumber": 2,
+      "startTime": 361.008,
+      "endTime": 509.143,
+      "startTimeFormatted": "06:01.008",
+      "endTimeFormatted": "08:29.143"
+    },
+    {
+      "page": 6,
+      "surahNumber": 2,
+      "startTime": 509.143,
+      "endTime": 677.726,
+      "startTimeFormatted": "08:29.143",
+      "endTimeFormatted": "11:17.726"
+    },
+    {
+      "page": 7,
+      "surahNumber": 2,
+      "startTime": 677.726,
+      "endTime": 837.778,
+      "startTimeFormatted": "11:17.726",
+      "endTimeFormatted": "13:57.778"
+    }
+  ],
+  "currentSurah": "2",
+  "reciterName": "",
+  "selectedQiraat": "",
+  "audioFileName": "x002.mp3",
+  "pageCounter": 1
+}

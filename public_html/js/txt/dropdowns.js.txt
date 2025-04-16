@@ -1,0 +1,217 @@
+// dropdowns.js
+
+// Function to populate the Surah dropdown
+function setupSurahDropdown() {
+    const surahSelect = document.getElementById('surahSelect');
+    if (!surahSelect) {
+        console.error("Surah select element (#surahSelect) not found.");
+        return;
+    }
+    // Clear existing options first
+    surahSelect.innerHTML = '<option value="">اختر سورة</option>';
+
+    // Ensure surahData is available
+    if (typeof surahData === 'undefined') {
+        console.error("surahData is not defined. Make sure surah-data.js is loaded before dropdowns.js");
+        return;
+    }
+
+    surahData.forEach(surah => {
+        const option = document.createElement('option');
+        // Use surah.number as the value for consistency
+        option.value = surah.number;
+        // Keep the text descriptive
+        option.textContent = `${surah.number} - ${surah.englishName} (${surah.arabicName}) [${surah.startPage}-${surah.endPage}]`;
+        surahSelect.appendChild(option);
+    });
+
+    // Remove any previous listener to avoid duplication if this function is called multiple times
+    surahSelect.removeEventListener('change', handleSurahChange);
+    surahSelect.addEventListener('change', handleSurahChange);
+}
+
+// Handler function for Surah selection change
+function handleSurahChange() {
+    // 'this' refers to the select element
+    // Ensure global currentSurah exists (should be defined in app-initialization.js)
+    if (typeof window.currentSurah !== 'undefined') {
+        window.currentSurah = this.value; // This will now be the Surah number as a string
+        // Trigger saving state
+        if (typeof saveToLocalStorage === 'function') {
+            saveToLocalStorage();
+        } else {
+            console.warn("saveToLocalStorage function not found when handling Surah change.");
+        }
+    } else {
+        console.error("Global 'currentSurah' variable not initialized!");
+    }
+    // Note: The dynamic button generation listens for this 'change' event separately in its own file.
+}
+
+
+// --- MODIFIED Function to add/manage reciter input field ---
+function addReciterInput() {
+    let reciterInputElement = document.getElementById('reciterInput'); // Try to find existing element first
+
+    // If the input element doesn't exist in the DOM yet
+    if (!reciterInputElement) {
+        console.log("Creating reciter input element.");
+        const formGroup = document.createElement('div');
+        formGroup.className = 'form-group';
+
+        const label = document.createElement('label');
+        label.setAttribute('for', 'reciterInput');
+        label.textContent = 'اسم القارئ';
+
+        // Create the input element and assign it to our variable
+        reciterInputElement = document.createElement('input');
+        reciterInputElement.setAttribute('type', 'text');
+        reciterInputElement.setAttribute('id', 'reciterInput');
+        reciterInputElement.setAttribute('placeholder', 'أدخل اسم القارئ');
+
+        formGroup.appendChild(label);
+        formGroup.appendChild(reciterInputElement);
+
+        // Find the Qira'at select element's container to insert before it
+        const qiraatSelectGroup = document.getElementById('qiraatSelect')?.closest('.form-group'); // Find closest form-group parent
+
+        if (qiraatSelectGroup) {
+            // Insert the new group before the Qira'at group
+            qiraatSelectGroup.parentNode.insertBefore(formGroup, qiraatSelectGroup);
+            console.log("Inserted reciter input before Qira'at select group.");
+        } else {
+            // Fallback: Append to the main card if the Qira'at group isn't found structured as expected
+             console.warn("Qiraat select group not found, attempting fallback insertion.");
+             const mainCard = document.querySelector('.container > .card:first-of-type'); // Target the first card
+             if (mainCard) {
+                 // Try inserting before the file input group
+                 const fileInputGroup = mainCard.querySelector('.form-group input[type="file"]')?.closest('.form-group');
+                 if (fileInputGroup) {
+                     mainCard.insertBefore(formGroup, fileInputGroup);
+                     console.log("Fallback: Inserted reciter input before file input group.");
+                 } else {
+                      // Append as last resort if file input not found
+                     mainCard.appendChild(formGroup);
+                      console.log("Fallback: Appended reciter input to main card.");
+                 }
+             } else {
+                  console.error("Cannot find suitable location to insert Reciter input.");
+             }
+        }
+    } else {
+         console.log("Reciter input element already exists.");
+    }
+
+    // --- Apply value and listener AFTER ensuring the element exists ---
+    if (reciterInputElement) {
+        // Ensure global reciterName is accessible (should be defined in app-initialization.js)
+        if (typeof window.reciterName === 'undefined') {
+            console.warn("Global 'reciterName' variable is not initialized! Initializing.");
+             window.reciterName = '';
+        }
+
+        // Get value from storage OR use the current global value
+        const storedReciterName = localStorage.getItem('reciterName');
+        if (storedReciterName !== null) {
+             window.reciterName = storedReciterName; // Prioritize storage on load/setup
+        }
+        reciterInputElement.value = window.reciterName; // Set the input value
+
+        // Remove any potential existing listener to prevent duplicates
+        reciterInputElement.removeEventListener('input', handleReciterInput);
+        // Add the event listener using a named function
+        reciterInputElement.addEventListener('input', handleReciterInput);
+
+    } else {
+        console.error("Failed to find or create the reciter input element (#reciterInput).");
+    }
+}
+
+// --- Define the event handler function separately for reciter input ---
+function handleReciterInput() {
+    // 'this' refers to the input element that triggered the event
+    // Ensure global reciterName variable exists and update it
+    if (typeof window.reciterName !== 'undefined') {
+        window.reciterName = this.value;
+        // Update localStorage directly or rely on saveToLocalStorage if it handles this
+        localStorage.setItem('reciterName', window.reciterName);
+        // If saveToLocalStorage also saves reciterName, call it too
+        if (typeof saveToLocalStorage === 'function') {
+            // saveToLocalStorage(); // Uncomment if saveToLocalStorage needs to be called on every input change
+        }
+    } else {
+        console.error("Global 'reciterName' not defined during input event.");
+    }
+}
+
+
+// Function to populate the Qira'at dropdown with Rawat
+function setupQiraatDropdown() {
+    const qiraatSelect = document.getElementById('qiraatSelect');
+    if (!qiraatSelect) {
+         console.error("Qiraat select element (#qiraatSelect) not found.");
+         return;
+    }
+    // Clear existing options
+    qiraatSelect.innerHTML = '<option value="">اختر القراءة / الراوي</option>';
+
+    // Ensure qiraatData is available
+    if (typeof qiraatData === 'undefined') {
+        console.error("qiraatData is not defined. Make sure qiraat-data.js is loaded before dropdowns.js");
+        return;
+    }
+
+    qiraatData.forEach(qiraat => {
+        // Add the Qira'at itself as an option (treat it as a group header, might make it disabled)
+        const qiraatOption = document.createElement('option');
+        qiraatOption.value = qiraat.name; // Store only the Qira'at name
+        qiraatOption.textContent = `${qiraat.name} (قراءة)`;
+        qiraatOption.setAttribute('data-type', 'qiraat');
+        // qiraatOption.disabled = true; // Optional: make the Qira'at name unselectable
+        qiraatSelect.appendChild(qiraatOption);
+
+        // Add each Rawi as a separate, selectable option under the Qira'at
+        qiraat.rawat.forEach(rawi => {
+            const rawiOption = document.createElement('option');
+            rawiOption.value = `${qiraat.name} - ${rawi.name}`; // Store "Qira'at - Rawi"
+            rawiOption.textContent = `  - ${rawi.name} (راوي)`; // Indent Rawi
+            rawiOption.setAttribute('data-type', 'rawi');
+            qiraatSelect.appendChild(rawiOption);
+        });
+    });
+
+    // Remove any previous listener
+    qiraatSelect.removeEventListener('change', handleQiraatChange);
+    qiraatSelect.addEventListener('change', handleQiraatChange);
+}
+
+// Handler function for Qira'at/Rawi selection change
+function handleQiraatChange() {
+     // 'this' refers to the select element
+    const selectedValue = this.value.trim();
+
+    // Ensure global variables exist
+    if (typeof window.selectedQiraat === 'undefined') window.selectedQiraat = '';
+    if (typeof window.selectedRawi === 'undefined') window.selectedRawi = '';
+
+    // Split Qiraat and Rawi for storage/use
+    if (selectedValue.includes(' - ')) {
+        // Rawi selected
+        [window.selectedQiraat, window.selectedRawi] = selectedValue.split(' - ');
+    } else if (selectedValue !== '') {
+        // Qiraat selected (or a value without ' - ')
+        window.selectedQiraat = selectedValue;
+        window.selectedRawi = ''; // Clear Rawi if only Qiraat is chosen
+    } else {
+         // "Choose..." selected
+         window.selectedQiraat = '';
+         window.selectedRawi = '';
+    }
+
+    // Trigger saving state
+    if (typeof saveToLocalStorage === 'function') {
+        saveToLocalStorage();
+    } else {
+        console.warn("saveToLocalStorage function not found when handling Qiraat change.");
+    }
+}

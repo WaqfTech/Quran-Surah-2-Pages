@@ -15,19 +15,22 @@ document.addEventListener('DOMContentLoaded', function() {
         console.error("Dynamic buttons: surahData not defined.");
         return;
     }
-    if (typeof pages === 'undefined') {
-        console.error("Dynamic buttons: `pages` array not defined globally.");
-        return;
+    if (typeof window.pages === 'undefined') {
+        // Initialize if somehow missed (should be done in app-initialization)
+        console.warn("Dynamic buttons: Global `pages` array not defined, initializing.");
+        window.pages = [];
     }
 
+    // Listen for Surah changes to generate the marking buttons
     surahSelect.addEventListener('change', generateButtons);
 
+    // Function to generate the "Mark Page X" buttons
     function generateButtons() {
         const selectedSurahValue = surahSelect.value;
-        pageMarkingContainer.innerHTML = ''; // Clear
+        pageMarkingContainer.innerHTML = ''; // Clear previous buttons
 
         if (!selectedSurahValue) {
-            pageMarkingContainer.innerHTML = '<p>الرجاء اختيار السورة لعرض أزرار الصفحات.</p>';
+            pageMarkingContainer.innerHTML = '<p>الرجاء اختيار السورة لعرض أزرار تحديد الصفحات.</p>';
             return;
         }
 
@@ -35,19 +38,23 @@ document.addEventListener('DOMContentLoaded', function() {
         const surah = surahData.find(s => s.number === selectedSurahNumber);
 
         if (surah) {
+            console.log(`Generating mark buttons for Surah ${selectedSurahNumber} (Pages ${surah.startPage}-${surah.endPage})`);
             for (let pageNum = surah.startPage; pageNum <= surah.endPage; pageNum++) {
                 const button = document.createElement('button');
-                button.textContent = `صفحة ${pageNum}`;
+                button.textContent = `  صفحة ${pageNum}`; // More descriptive text
                 button.classList.add('page-mark-button');
                 button.dataset.page = pageNum;
                 button.dataset.surah = selectedSurahNumber;
 
-                const existingMark = pages.find(p => p.surahNumber === selectedSurahNumber && p.page === pageNum);
+                // Check if this page is *already* marked in the global pages array
+                const existingMark = window.pages.find(p => p.surahNumber === selectedSurahNumber && p.page === pageNum);
                 if (existingMark) {
                    button.disabled = true;
                    // Display start/end time on hover for marked buttons
-                   button.title = `مُحددة: ${existingMark.startTimeFormatted} - ${existingMark.endTimeFormatted}`;
-                   button.classList.add('marked');
+                   button.title = `مُحددة بالفعل: ${existingMark.startTimeFormatted} - ${existingMark.endTimeFormatted}`;
+                   button.classList.add('marked'); // Add 'marked' class for styling
+                } else {
+                    button.title = `تحديد نهاية صفحة ${pageNum}`; // Default title
                 }
 
                 button.addEventListener('click', handlePageMarkClick);
@@ -55,24 +62,34 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         } else {
              pageMarkingContainer.innerHTML = `<p>بيانات السورة رقم ${selectedSurahNumber} غير موجودة.</p>`;
+             console.error(`Data for Surah ${selectedSurahNumber} not found in surahData.`);
         }
     }
 
 
+    // Handler when a "Mark Page X" button is clicked
     function handlePageMarkClick(event) {
          const button = event.target;
          const pageNum = parseInt(button.dataset.page);
          const surahNum = parseInt(button.dataset.surah);
          const audio = document.getElementById('audio');
 
-         if (!audio.src) {
-             alert('الرجاء اختيار ملف صوتي أولاً');
+         if (!audio || !audio.src || audio.readyState < 1 /* HAVE_NOTHING or HAVE_METADATA */ ) {
+             alert('الرجاء اختيار ملف صوتي صالح وتشغيله أولاً');
+             console.warn("Page mark prevented: Audio not ready or no source.");
              return;
          }
-         // Optional: check if audio is playing...
+          if (isNaN(audio.duration) || audio.duration <= 0) {
+             alert('مدة الملف الصوتي غير متاحة أو غير صالحة.');
+             console.warn("Page mark prevented: Invalid audio duration.");
+             return;
+         }
 
-         if (pages.some(p => p.surahNumber === surahNum && p.page === pageNum)) {
-            console.warn(`Page ${pageNum} for Surah ${surahNum} already marked.`);
+         // Double-check if already marked (should be disabled, but good practice)
+         if (window.pages.some(p => p.surahNumber === surahNum && p.page === pageNum)) {
+            console.warn(`Page ${pageNum} for Surah ${surahNum} already marked. Ignoring click.`);
+            button.disabled = true; // Ensure it's disabled
+            button.classList.add('marked');
             return;
          }
 
@@ -81,68 +98,88 @@ document.addEventListener('DOMContentLoaded', function() {
 
          // --- Determine Start Time ---
          // Find the latest end time of a previously marked page *for this Surah*
-         let lastEndTimeForSurah = 0.0;
-         let foundPrevious = false;
-         // Sort by page number to find the immediate predecessor reliably
-         const pagesForThisSurah = pages
+         // Sort marked pages for THIS surah by page number to reliably find the immediate predecessor
+         const pagesForThisSurah = window.pages
              .filter(p => p.surahNumber === surahNum)
              .sort((a, b) => a.page - b.page);
 
-         // Find the page right before the one being marked
-         let previousPageIndex = -1;
-         for(let i=0; i < pagesForThisSurah.length; i++) {
+         let previousPage = null;
+         for(let i = pagesForThisSurah.length - 1; i >= 0; i--) {
              if (pagesForThisSurah[i].page < pageNum) {
-                 previousPageIndex = i; // Keep track of the latest page before the current one
-             } else {
-                 break; // Stop once we pass the target page number
+                 previousPage = pagesForThisSurah[i];
+                 break; // Found the immediately preceding marked page
              }
          }
 
-         if (previousPageIndex !== -1) {
-             calculatedStartTime = pagesForThisSurah[previousPageIndex].endTime;
-             foundPrevious = true;
-             console.log(`Found previous page ${pagesForThisSurah[previousPageIndex].page}, setting start time to its end time: ${calculatedStartTime}`);
+         if (previousPage) {
+             // Start time is the end time of the previous marked page
+             calculatedStartTime = previousPage.endTime || 0; // Use 0 if endTime is somehow undefined
+             console.log(`Found previous page ${previousPage.page}, setting start time for page ${pageNum} to its end time: ${calculatedStartTime}`);
          } else {
-              // No preceding page found *for this surah*, it's the first one marked (or first overall)
-              console.log(`No previous page found for Surah ${surahNum} before page ${pageNum}. Setting start time to 0.`);
+              // No preceding page found *marked for this surah*, it's the first one marked (or first overall)
+              // Set start time to 0.
               calculatedStartTime = 0.0;
+              console.log(`No previous page found marked for Surah ${surahNum} before page ${pageNum}. Setting start time to 0.`);
          }
          // --- End Start Time Determination ---
 
 
-         // Ensure end time is not before start time (can happen with quick clicks)
+         // Ensure end time is not before start time (can happen with rapid clicks)
          const calculatedEndTime = Math.max(currentAudioTime, calculatedStartTime);
-         if (calculatedEndTime !== currentAudioTime) {
-             console.warn(`Adjusted end time from ${currentAudioTime} to ${calculatedEndTime} to prevent negative duration.`);
+         if (calculatedEndTime < calculatedStartTime) {
+             // This case should ideally not happen with Math.max, but log if it does
+             console.error(`Logic Error: Calculated End Time (${calculatedEndTime}) is less than Start Time (${calculatedStartTime}) for page ${pageNum}.`);
+             // Potentially fallback or alert user
+             return; // Prevent adding invalid data
+         }
+          if (calculatedEndTime !== currentAudioTime) {
+             console.warn(`Adjusted calculated end time from ${currentAudioTime} to ${calculatedEndTime} for page ${pageNum} to ensure it's not before start time.`);
          }
 
-         const startTimeFormatted = typeof formatTimeWithMs === 'function' ? formatTimeWithMs(calculatedStartTime) : calculatedStartTime.toFixed(3);
-         const endTimeFormatted = typeof formatTimeWithMs === 'function' ? formatTimeWithMs(calculatedEndTime) : calculatedEndTime.toFixed(3);
+         // Ensure times are numbers before formatting
+         const finalStartTime = Number(calculatedStartTime.toFixed(3));
+         const finalEndTime = Number(calculatedEndTime.toFixed(3));
 
-         // Add the new page segment object
-         pages.push({
+         if (isNaN(finalStartTime) || isNaN(finalEndTime)) {
+             console.error(`Invalid time calculation: Start=${finalStartTime}, End=${finalEndTime}. Aborting mark.`);
+             alert("حدث خطأ في حساب الوقت. لم يتم تحديد الصفحة.");
+             return;
+         }
+
+
+         const startTimeFormatted = typeof formatTimeWithMs === 'function' ? formatTimeWithMs(finalStartTime) : finalStartTime.toString();
+         const endTimeFormatted = typeof formatTimeWithMs === 'function' ? formatTimeWithMs(finalEndTime) : finalEndTime.toString();
+
+         // Add the new page segment object to the global array
+         window.pages.push({
              page: pageNum,
              surahNumber: surahNum,
-             startTime: calculatedStartTime,
-             endTime: calculatedEndTime,
+             startTime: finalStartTime,
+             endTime: finalEndTime,
              startTimeFormatted: startTimeFormatted,
              endTimeFormatted: endTimeFormatted
          });
 
-         // Sort pages array globally (important for consistency)
-         pages.sort((a, b) => {
+         // Sort pages array globally (important for consistency if order matters elsewhere)
+         // Sorting by Surah then Page is crucial for finding the previous page correctly
+         window.pages.sort((a, b) => {
             if (a.surahNumber !== b.surahNumber) return a.surahNumber - b.surahNumber;
-            if (a.page !== b.page) return a.page - b.page; // Should be unique per Surah now
-            return a.startTime - b.startTime; // Fallback sort by time
+            return a.page - b.page; // Sort by page number within the same Surah
+            // return a.startTime - b.startTime; // Fallback sort by time if pages were equal (shouldn't happen for same surah)
          });
 
-         // Update UI
+         console.log(`Marked Page ${pageNum} (Surah ${surahNum}): ${startTimeFormatted} - ${endTimeFormatted}`);
+
+         // --- Update UI ---
+         // 1. Update the list display (rebuildPageList will now show this page as marked)
          if (typeof rebuildPageList === 'function') rebuildPageList(); else console.error("handlePageMarkClick: rebuildPageList not found");
+         // 2. Save the updated pages array to localStorage
          if (typeof saveToLocalStorage === 'function') saveToLocalStorage(); else console.error("handlePageMarkClick: saveToLocalStorage not found");
-         if (typeof window.renderTimeline === 'function') window.renderTimeline(audio, pages); else console.error("handlePageMarkClick: renderTimeline not found");
+         // 3. Update the timeline visualization
+         if (typeof window.renderTimeline === 'function') window.renderTimeline(audio, window.pages); else console.error("handlePageMarkClick: renderTimeline not found");
 
 
-         // Update button state
+         // Update the clicked button's state
          button.disabled = true;
          button.title = `مُحددة: ${startTimeFormatted} - ${endTimeFormatted}`;
          button.classList.add('marked');
@@ -156,6 +193,7 @@ document.addEventListener('DOMContentLoaded', function() {
          }
     }
 
-    // Call generateButtons initially if a Surah is selected on load
-    // This should be triggered by app-initialization.js after loading state
+    // Initial generation of buttons might be triggered by app-initialization.js
+    // after loading state and setting the surahSelect value.
+    // The 'change' event listener on surahSelect handles subsequent user selections.
 });

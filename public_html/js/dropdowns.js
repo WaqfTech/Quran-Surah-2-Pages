@@ -78,7 +78,7 @@ function addReciterInput() {
 // Handler for reciter input changes
 function handleReciterInput() {
     if (typeof window.reciterName !== 'undefined') {
-        window.reciterName = this.value;
+        window.reciterName = sanitizeUserText(this.value);
         if (typeof saveToLocalStorage === 'function') saveToLocalStorage();
         if (typeof window.updateAudioInfoDisplay === 'function') window.updateAudioInfoDisplay(); // Update info display
     } else { console.error("Global 'reciterName' not defined during input event."); }
@@ -124,8 +124,8 @@ function handleQiraatChange() {
 
     if (window.selectedQiraat !== newQiraat || window.selectedRawi !== newRawi) {
         qiraatChanged = true;
-        window.selectedQiraat = newQiraat;
-        window.selectedRawi = newRawi;
+        window.selectedQiraat = sanitizeUserText(newQiraat);
+        window.selectedRawi = sanitizeUserText(newRawi);
         console.log(`Qiraat/Rawi changed: Qiraat='${window.selectedQiraat}', Rawi='${window.selectedRawi}'`);
         if (typeof saveToLocalStorage === 'function') saveToLocalStorage(); else console.warn("saveToLocalStorage function not found.");
         if (typeof window.updateAudioInfoDisplay === 'function') window.updateAudioInfoDisplay(); // Update info display

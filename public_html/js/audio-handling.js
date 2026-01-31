@@ -90,21 +90,21 @@ window.updateAudioInfoDisplay = function() {
     if (!audioInfoDisplay) return;
 
     const audio = document.getElementById('audio');
+    // Prepare parts as objects {label, value}
     const parts = [];
 
-    // Filename
+    // Filename (use sanitized text)
     if (window.audioFileName) {
-        parts.push(`<strong>الملف:</strong> ${window.audioFileName}`);
+        parts.push({ label: 'الملف', value: sanitizeUserText(window.audioFileName) });
     } else if (audio && audio.src) {
-         parts.push(`<strong>الملف:</strong> <span>(ملف محمل بدون اسم محفوظ)</span>`);
+        parts.push({ label: 'الملف', value: '(ملف محمل بدون اسم محفوظ)' });
     } else {
-         parts.push(`<strong>الملف:</strong> <span>(غير محدد)</span>`);
+        parts.push({ label: 'الملف', value: '(غير محدد)' });
     }
-
 
     // Reciter
     if (window.reciterName) {
-        parts.push(`<strong>القارئ:</strong> ${window.reciterName}`);
+        parts.push({ label: 'القارئ', value: sanitizeUserText(window.reciterName) });
     }
 
     // Surah Info
@@ -112,37 +112,50 @@ window.updateAudioInfoDisplay = function() {
     if (!isNaN(selectedSurahNumber) && selectedSurahNumber > 0 && typeof surahData !== 'undefined') {
         const surahInfo = surahData.find(s => s.number === selectedSurahNumber);
         if (surahInfo) {
-            parts.push(`<strong>السورة:</strong> ${surahInfo.number} - ${surahInfo.arabicName}`);
+            parts.push({ label: 'السورة', value: `${surahInfo.number} - ${surahInfo.arabicName}` });
         }
     }
 
     // Qiraat/Rawi
     if (window.selectedQiraat) {
-        let qiraatText = `<strong>القارئ:</strong> ${window.selectedQiraat}`;
-        if (window.selectedRawi) {
-            qiraatText += ` (<strong>الراوي:</strong> ${window.selectedRawi})`;
+        let qVal = sanitizeUserText(window.selectedQiraat);
+        if (window.selectedRawi) qVal += ` (الراوي: ${sanitizeUserText(window.selectedRawi)})`;
+        parts.push({ label: 'القراءة', value: qVal });
+    }
+
+    // Decide how to display: if only the filename is present and it's the default '(غير محدد)', show helpful prompt
+    const onlyFilenameAndDefault = parts.length === 1 && parts[0].value === '(غير محدد)';
+
+    // Clear previous content safely
+    while (audioInfoDisplay.firstChild) audioInfoDisplay.removeChild(audioInfoDisplay.firstChild);
+
+    if (onlyFilenameAndDefault) {
+        const span = document.createElement('span');
+        span.textContent = 'الرجاء تحميل ملف صوتي واختيار البيانات';
+        audioInfoDisplay.appendChild(span);
+        return;
+    }
+
+    // Build content using DOM nodes to avoid inserting HTML
+    const fragment = document.createDocumentFragment();
+    parts.forEach((p, idx) => {
+        const labelEl = document.createElement('strong');
+        labelEl.textContent = `${p.label}: `;
+        fragment.appendChild(labelEl);
+
+        const valueEl = document.createElement('span');
+        valueEl.textContent = p.value;
+        fragment.appendChild(valueEl);
+
+        if (idx !== parts.length - 1) {
+            const sep = document.createElement('span');
+            sep.className = 'info-separator';
+            sep.textContent = ' | ';
+            fragment.appendChild(sep);
         }
-        parts.push(qiraatText);
-    }
+    });
 
-    // Audio State (optional)
-    if (audio && audio.src) {
-         if(audio.paused) {
-             // parts.push(`<span>[متوقف]</span>`);
-         } else {
-              // parts.push(`<span>[تشغيل]</span>`);
-         }
-    }
-
-
-    if (parts.length > 1) { // Only show if more than just filename status
-         audioInfoDisplay.innerHTML = parts.join(' <span class="info-separator">|</span> ');
-    } else if (parts.length === 1) { // Show only filename status if that's all we have
-         audioInfoDisplay.innerHTML = parts[0];
-    }
-    else {
-         audioInfoDisplay.innerHTML = `<span>الرجاء تحميل ملف صوتي واختيار البيانات</span>`; // Default message
-    }
+    audioInfoDisplay.appendChild(fragment);
 }
 
 // NEW: Function to seek audio by a relative amount

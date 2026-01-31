@@ -1,190 +1,169 @@
 // js/csv-export.js
 
-// Export button functionality
-document.getElementById('exportButton').addEventListener('click', function() {
-    // Get metadata from inputs
-    const surahSelect = document.getElementById('surahSelect');
-    const reciterInput = document.getElementById('reciterInput');
-    const qiraatSelect = document.getElementById('qiraatSelect');
+// Export button functionality (CSV)
+const exportCsvButton = document.getElementById('exportCsvButton');
+if (exportCsvButton) {
+    exportCsvButton.addEventListener('click', function() {
+        const selectedSurahNumber = parseInt(window.currentSurah);
+        const reciterNameValue = window.reciterName || 'Reciter';
+        const fileQiraat = window.selectedQiraat || 'Not Set';
+        const fileRawi = window.selectedRawi || 'Not Set';
 
-    const selectedSurahOption = surahSelect ? surahSelect.options[surahSelect.selectedIndex] : null;
-    const selectedSurahNumber = selectedSurahOption ? selectedSurahOption.value : '';
-    const fallbackSurahName = selectedSurahOption ? selectedSurahOption.text.split('(')[0].trim() : 'Surah';
+        if (typeof window.pages === 'undefined') { alert('لا توجد بيانات صفحات معرفة.'); return; }
+        const pagesForCurrentSurah = window.pages.filter(p => p.surahNumber === selectedSurahNumber);
+        if (pagesForCurrentSurah.length === 0) { alert(`لا توجد صفحات محددة للسورة المختارة (${selectedSurahNumber}) لتصديرها.`); return; }
 
-    const reciterNameValue = reciterInput ? reciterInput.value.trim() || 'Reciter' : 'Reciter';
-    const selectedQiraatValue = qiraatSelect ? qiraatSelect.value.trim() || 'Not Set' : 'Not Set';
+        const surahInfo = typeof surahData !== 'undefined' ? surahData.find(s => s.number === selectedSurahNumber) : null;
+        const surahName = surahInfo ? surahInfo.englishName : `Surah_${selectedSurahNumber}`;
+        const arabicName = surahInfo ? surahInfo.arabicName : '';
+        const startPage = surahInfo ? surahInfo.startPage : 'N/A';
+        const endPage = surahInfo ? surahInfo.endPage : 'N/A';
+        const totalAyas = surahInfo ? surahInfo.totalAyas : 'N/A';
 
-    let fileQiraat = '';
-    let fileRawi = '';
-    if (selectedQiraatValue.includes(' - ')) {
-        [fileQiraat, fileRawi] = selectedQiraatValue.split(' - ');
-    } else if (selectedQiraatValue !== 'Not Set' && selectedQiraatValue !== '') {
-        fileQiraat = selectedQiraatValue;
-        fileRawi = 'Not Set';
-    } else {
-         fileQiraat = 'Not Set';
-         fileRawi = 'Not Set';
-    }
+        const sortedPagesForExport = pagesForCurrentSurah.sort((a, b) => a.page - b.page);
 
-    // Ensure global pages array exists
-    if (typeof pages === 'undefined' || pages.length === 0) {
-        alert('لا توجد صفحات لتصديرها');
-        return;
-    }
+        let csvContent = `"Surah Name (En)","Surah Name (Ar)","Surah No.","Reciter","Qiraat","Rawi","Surah Start Page","Surah End Page","Total Ayas"\n`;
+        csvContent += `"${surahName}","${arabicName}","${selectedSurahNumber}","${reciterNameValue}","${fileQiraat}","${fileRawi}","${startPage}","${endPage}","${totalAyas}"\n\n`;
+        csvContent += `"Marked Page #","Start Time (s)","End Time (s)","Start Time (MM:SS.mmm)","End Time (MM:SS.mmm)"\n`;
 
-    // Sort pages by Surah then Page number for logical CSV output
-    const sortedPagesForExport = [...pages].sort((a, b) => {
-         if (a.surahNumber !== b.surahNumber) return a.surahNumber - b.surahNumber;
-         return a.page - b.page;
-     });
+        for (let i = 0; i < sortedPagesForExport.length; i++) {
+            const page = sortedPagesForExport[i];
+            const pageNum = page.page || 'N/A';
+            const startTimeSec = page.startTime?.toFixed(3) || 'N/A';
+            const endTimeSec = page.endTime?.toFixed(3) || 'N/A';
+            const startTimeFormatted = page.startTimeFormatted || 'N/A';
+            const endTimeFormatted = page.endTimeFormatted || 'N/A';
+            csvContent += `${pageNum},${startTimeSec},${endTimeSec},"${startTimeFormatted}","${endTimeFormatted}"\n`;
+        }
 
-    let csvContent = 'Surah,Reciter,Qiraat,Rawi,Start Page (Surah),Last Page (Surah),Total Ayas,Marked Page #,Start Time,End Time\n';
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        const url = URL.createObjectURL(blob);
 
-    for (let i = 0; i < sortedPagesForExport.length; i++) {
-        const page = sortedPagesForExport[i];
+        const filenameSurahPart = surahName.replace(/[^a-z0-9]/gi, '_');
+        const filenameReciterPart = reciterNameValue.replace(/[^a-z0-9]/gi, '_') || 'Reciter';
+        const filenameQiraatPart = fileQiraat.replace(/[^a-z0-9]/gi, '_') || 'Qiraat';
+        const filenameRawiPart = fileRawi.replace(/[^a-z0-9]/gi, '_') || 'Rawi';
 
-        // Ensure data integrity for the row
-        const pageNum = page.page || 'N/A';
-        const surahNum = page.surahNumber || 'N/A';
-        const startTime = page.startTimeFormatted || 'N/A'; // Use saved formatted start time
-        const endTime = page.endTimeFormatted || 'N/A';     // Use saved formatted end time
+        link.setAttribute('href', url);
+        link.setAttribute('download', `QuranMarker_${filenameSurahPart}_${filenameReciterPart}_${filenameQiraatPart}_${filenameRawiPart}_timestamps.csv`);
+        link.style.visibility = 'hidden';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
 
-        // Find the corresponding Surah details from surahData
-        const surah = typeof surahData !== 'undefined' ? surahData.find(s => s.number === surahNum) : null;
+         const successMessage = document.getElementById('successMessage');
+         if (successMessage) {
+             successMessage.textContent = 'تم تصدير ملف CSV بنجاح!';
+             successMessage.style.display = 'block';
+             setTimeout(() => { successMessage.style.display = 'none'; }, 3000);
+         }
+    });
+} else { console.warn("CSV Export button (#exportCsvButton) not found."); }
 
-        const surahName = surah ? surah.englishName : `Unknown Surah (${surahNum})`;
-        const startPage = surah ? surah.startPage : 'N/A';
-        const endPage = surah ? surah.endPage : 'N/A';
-        const totalAyas = surah ? surah.totalAyas : 'N/A';
-
-        // Get Qiraat/Rawi specific to this row (using file-level values for now)
-        // Escape commas within fields by enclosing in double quotes if necessary
-        csvContent += `"${surahName}","${reciterNameValue}","${fileQiraat}","${fileRawi}",${startPage},${endPage},${totalAyas},${pageNum},${startTime},${endTime}\n`;
-    }
-
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    const url = URL.createObjectURL(blob);
-
-    // Construct filename
-    const filenameSurahPart = surah ? surah.englishName.replace(/[^a-z0-9]/gi, '_') : `Surah_${selectedSurahNumber || 'Unknown'}`;
-    const filenameReciterPart = reciterNameValue.replace(/[^a-z0-9]/gi, '_') || 'Reciter';
-    const filenameQiraatPart = fileQiraat.replace(/[^a-z0-9]/gi, '_') || 'Qiraat';
-    const filenameRawiPart = fileRawi.replace(/[^a-z0-9]/gi, '_') || 'Rawi';
-
-    link.setAttribute('href', url);
-    link.setAttribute('download', `${filenameSurahPart}_${filenameReciterPart}_${filenameQiraatPart}_${filenameRawiPart}_pages.csv`);
-    link.style.visibility = 'hidden';
-
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url); // Clean up blob URL
-});
 
 // Import button functionality (JSON)
-document.getElementById('importButton').addEventListener('click', function() {
-    const fileInput = document.createElement('input');
-    fileInput.type = 'file';
-    fileInput.accept = '.json'; // Only allow JSON files
+const importJsonButton = document.getElementById('importButton');
+if (importJsonButton) {
+    importJsonButton.addEventListener('click', function() {
+        const fileInput = document.createElement('input');
+        fileInput.type = 'file';
+        fileInput.accept = '.json';
 
-    fileInput.addEventListener('change', function(e) {
-        const file = e.target.files[0];
-        if (!file) return; // No file selected
+        fileInput.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                try {
+                    const data = JSON.parse(event.target.result);
+                    console.log("Attempting to import data:", data);
 
-        const reader = new FileReader();
-        reader.onload = function(event) {
-            try {
-                const data = JSON.parse(event.target.result);
+                    if (!data || typeof data !== 'object') { throw new Error("Invalid file format: Not a valid JSON object."); }
+                    if (!Array.isArray(data.pages)) { data.pages = []; }
 
-                // --- Restore state from the imported data (using new structure) ---
-                // Ensure global variables exist before assigning
-                if (typeof window.pages === 'undefined') window.pages = [];
-                if (typeof window.currentSurah === 'undefined') window.currentSurah = '';
-                // etc. for other globals if needed
+                    const importedPages = (data.pages || []).map((p, index) => {
+                        const pageNum = parseInt(p?.page) || 0;
+                        const surahNum = parseInt(p?.surahNumber) || 0;
+                        const startTime = parseFloat(p?.startTime) || 0;
+                        const endTime = parseFloat(p?.endTime) || 0;
+                        if (pageNum <= 0 || surahNum <= 0 || isNaN(startTime) || isNaN(endTime) || endTime < startTime) {
+                            console.warn(`Skipping invalid page data during import at index ${index}:`, p); return null;
+                        }
+                        return {
+                            page: pageNum, surahNumber: surahNum, startTime: startTime, endTime: endTime,
+                            startTimeFormatted: typeof formatTimeWithMs === 'function' ? formatTimeWithMs(startTime) : String(startTime),
+                            endTimeFormatted: typeof formatTimeWithMs === 'function' ? formatTimeWithMs(endTime) : String(endTime)
+                        };
+                    }).filter(p => p !== null);
 
-                window.pages = data.pages || []; // *** Assumes imported pages have startTime, endTime etc. ***
-                window.currentSurah = data.currentSurah || ''; // Should be surah number string
-                window.reciterName = data.reciterName || '';
-                const importedQiraatRawi = data.selectedQiraat || '';
-                window.audioFileName = data.audioFileName || '';
+                    importedPages.sort((a, b) => {
+                        if (a.surahNumber !== b.surahNumber) return a.surahNumber - b.surahNumber;
+                        return a.page - b.page;
+                    });
 
-                // *** VALIDATE/SANITIZE IMPORTED PAGES DATA (Optional but recommended) ***
-                window.pages = window.pages.map(p => ({
-                    page: parseInt(p.page) || 0,
-                    surahNumber: parseInt(p.surahNumber) || 0,
-                    startTime: parseFloat(p.startTime) || 0,
-                    endTime: parseFloat(p.endTime) || 0,
-                    startTimeFormatted: typeof formatTimeWithMs === 'function' ? formatTimeWithMs(p.startTime || 0) : String(p.startTime || 0),
-                    endTimeFormatted: typeof formatTimeWithMs === 'function' ? formatTimeWithMs(p.endTime || 0) : String(p.endTime || 0)
-                })).filter(p => p.page > 0 && p.surahNumber > 0 && p.endTime >= p.startTime); // Basic filter
+                    window.pages = importedPages;
+                    window.currentSurah = String(data.currentSurah || '');
+                    window.reciterName = data.reciterName || '';
+                    const importedQiraatRawi = data.selectedQiraat || '';
+                    window.audioFileName = data.audioFileName || '';
+
+                     if (importedQiraatRawi.includes(' - ')) { [window.selectedQiraat, window.selectedRawi] = importedQiraatRawi.split(' - '); }
+                     else { window.selectedQiraat = importedQiraatRawi; window.selectedRawi = ''; }
+
+                    console.log("Successfully processed imported data.");
+
+                    // Update UI elements
+                    const surahSelect = document.getElementById('surahSelect'); if (surahSelect) { surahSelect.value = window.currentSurah; }
+                    const reciterInput = document.getElementById('reciterInput'); if (reciterInput) reciterInput.value = window.reciterName;
+                    const qiraatSelect = document.getElementById('qiraatSelect'); if (qiraatSelect) { qiraatSelect.value = importedQiraatRawi; }
+                    const fileNameDisplay = document.getElementById('fileName'); if (fileNameDisplay) fileNameDisplay.textContent = window.audioFileName || 'لم يتم تحميل ملف صوتي';
+
+                    // Save imported state to localStorage IMMEDIATELY
+                    if (typeof saveToLocalStorage === 'function') { saveToLocalStorage(); console.log("Saved imported state to localStorage."); }
+                    else { console.error("saveToLocalStorage function not found after import."); }
+
+                     // Update Audio Info Display
+                     if (typeof window.updateAudioInfoDisplay === 'function') window.updateAudioInfoDisplay();
+
+                    // Trigger UI updates (list, dynamic buttons) via change event
+                    if (surahSelect) {
+                         console.log("Dispatching change event on Surah select after import.");
+                         surahSelect.dispatchEvent(new Event('change')); // This triggers rebuildPageList and generateButtons
+                     } else {
+                          // Manually call rebuild if select not found (less ideal)
+                          if (typeof rebuildPageList === 'function') rebuildPageList();
+                     }
 
 
-                 // Set global qiraat/rawi variables from combined string
-                 if (importedQiraatRawi.includes(' - ')) {
-                     [window.selectedQiraat, window.selectedRawi] = importedQiraatRawi.split(' - ');
-                 } else {
-                     window.selectedQiraat = importedQiraatRawi;
-                     window.selectedRawi = '';
-                 }
+                    // Render timeline AFTER UI updates
+                    const audio = document.getElementById('audio');
+                    if (audio && typeof window.renderTimeline === 'function') {
+                          const tryRenderTimeline = () => {
+                              if (audio.readyState >= 1 && window.pages && window.pages.length > 0) {
+                                  console.log("Rendering timeline after import.");
+                                  window.renderTimeline(audio, window.pages);
+                              } else { console.log("Timeline not rendered after import: Audio not ready or no pages data."); }
+                          };
+                          setTimeout(tryRenderTimeline, 100);
+                     }
 
-                // Update UI elements
-                const surahSelect = document.getElementById('surahSelect');
-                if (surahSelect) surahSelect.value = window.currentSurah;
+                    const successMessage = document.getElementById('successMessage');
+                    if (successMessage) {
+                        successMessage.textContent = 'تم استيراد الإعدادات بنجاح!';
+                        successMessage.style.display = 'block';
+                        setTimeout(() => { successMessage.style.display = 'none'; }, 3000);
+                    }
 
-                const reciterInput = document.getElementById('reciterInput');
-                if (reciterInput) reciterInput.value = window.reciterName;
-
-                const qiraatSelect = document.getElementById('qiraatSelect');
-                if (qiraatSelect) qiraatSelect.value = importedQiraatRawi;
-
-                const fileNameDisplay = document.getElementById('fileName');
-                if (fileNameDisplay) fileNameDisplay.textContent = window.audioFileName;
-
-                const audio = document.getElementById('audio');
-                // Avoid setting src from filename directly for security/reliability
-
-                // Save imported state to localStorage
-                if (typeof saveToLocalStorage === 'function') saveToLocalStorage();
-
-                // Update UI list and timeline
-                if (typeof rebuildPageList === 'function') rebuildPageList();
-
-                 // Trigger dynamic button generation for the imported Surah
-                 if (surahSelect && window.currentSurah) {
-                     surahSelect.dispatchEvent(new Event('change'));
-                 }
-
-                 // Render timeline after UI updates
-                 if (audio && typeof window.renderTimeline === 'function') {
-                      const tryRenderTimeline = () => {
-                          if (audio.readyState >= 1) { // HAVE_METADATA
-                              window.renderTimeline(audio, window.pages);
-                          } else if (audio.src && !audio.error) { // If src set but not loaded, wait
-                               audio.addEventListener('loadedmetadata', () => window.renderTimeline(audio, window.pages), { once: true });
-                               audio.addEventListener('error', () => console.error("Audio error during timeline render attempt."), { once: true });
-                           }
-                      };
-                      // Give potential audio src load a moment
-                      setTimeout(tryRenderTimeline, 100);
-                 }
-
-                // Display success message
-                const successMessage = document.getElementById('successMessage');
-                if (successMessage) {
-                    successMessage.textContent = 'تم استيراد الإعدادات بنجاح!';
-                    successMessage.style.display = 'block';
-                    setTimeout(() => { successMessage.style.display = 'none'; }, 3000);
+                } catch (error) {
+                    alert('فشل استيراد الإعدادات: ' + error.message);
+                    console.error("Import Error:", error);
                 }
-
-            } catch (error) {
-                alert('فشل استيراد الإعدادات: ' + error);
-                console.error("Import Error:", error);
-            }
-        };
-
-        reader.readAsText(file);
+            };
+            reader.onerror = (error) => { alert('فشل قراءة الملف.'); console.error("File Reading Error:", error); };
+            reader.readAsText(file);
+        });
+        fileInput.click();
     });
-
-    fileInput.click();
-});
+} else { console.warn("Import JSON button (#importButton) not found."); }

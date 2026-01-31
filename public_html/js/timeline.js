@@ -6,7 +6,7 @@ window.renderTimeline = function(audio, pagesArray) {
 
     // Clear timeline content and reset cursor
     if (timeline) {
-        timeline.innerHTML = ""; // Clear previous segments and numbers
+        while (timeline.firstChild) timeline.removeChild(timeline.firstChild); // Clear previous segments and numbers
         timeline.style.cursor = 'default';
     } else {
         console.error("Timeline element not found.");

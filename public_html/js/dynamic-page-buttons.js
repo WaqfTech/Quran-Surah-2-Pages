@@ -2,7 +2,7 @@
 
 // Assumes global vars: surahData, pages, formatTimeWithMs, saveToLocalStorage, rebuildPageList, renderTimeline
 
-document.addEventListener('DOMContentLoaded', function() {
+function initDynamicPageButtons() {
     const surahSelect = document.getElementById('surahSelect');
     const pageMarkingContainer = document.getElementById('pageMarkingContainer');
     const audio = document.getElementById('audio');
@@ -27,10 +27,13 @@ document.addEventListener('DOMContentLoaded', function() {
     // Function to generate the "Mark Page X" buttons
     function generateButtons() {
         const selectedSurahValue = surahSelect.value;
-        pageMarkingContainer.innerHTML = ''; // Clear previous buttons
+        // Clear previous buttons safely
+        while (pageMarkingContainer.firstChild) pageMarkingContainer.removeChild(pageMarkingContainer.firstChild);
 
         if (!selectedSurahValue) {
-            pageMarkingContainer.innerHTML = '<p>الرجاء اختيار السورة لعرض أزرار تحديد الصفحات.</p>';
+            const p = document.createElement('p');
+            p.textContent = 'الرجاء اختيار السورة لعرض أزرار تحديد الصفحات.';
+            pageMarkingContainer.appendChild(p);
             return;
         }
 
@@ -61,7 +64,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 pageMarkingContainer.appendChild(button);
             }
         } else {
-             pageMarkingContainer.innerHTML = `<p>بيانات السورة رقم ${selectedSurahNumber} غير موجودة.</p>`;
+             const p = document.createElement('p');
+             p.textContent = `بيانات السورة رقم ${selectedSurahNumber} غير موجودة.`;
+             pageMarkingContainer.appendChild(p);
              console.error(`Data for Surah ${selectedSurahNumber} not found in surahData.`);
         }
     }
@@ -196,4 +201,8 @@ document.addEventListener('DOMContentLoaded', function() {
     // Initial generation of buttons might be triggered by app-initialization.js
     // after loading state and setting the surahSelect value.
     // The 'change' event listener on surahSelect handles subsequent user selections.
-});
+}
+
+// Initialize immediately if DOM is already ready, otherwise wait for DOMContentLoaded
+if (document.readyState !== 'loading') initDynamicPageButtons();
+else document.addEventListener('DOMContentLoaded', initDynamicPageButtons);

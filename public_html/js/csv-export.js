@@ -105,11 +105,15 @@ if (importJsonButton) {
 
                     window.pages = importedPages;
                     window.currentSurah = String(data.currentSurah || '');
-                    window.reciterName = data.reciterName || '';
-                    const importedQiraatRawi = data.selectedQiraat || '';
-                    window.audioFileName = data.audioFileName || '';
+                    window.reciterName = sanitizeUserText(data.reciterName || '');
+                    const importedQiraatRawi = sanitizeUserText(data.selectedQiraat || '');
+                    window.audioFileName = sanitizeUserText(data.audioFileName || '');
 
-                     if (importedQiraatRawi.includes(' - ')) { [window.selectedQiraat, window.selectedRawi] = importedQiraatRawi.split(' - '); }
+                     if (importedQiraatRawi.includes(' - ')) { 
+                         const parts = importedQiraatRawi.split(' - ');
+                         window.selectedQiraat = sanitizeUserText(parts[0] || '');
+                         window.selectedRawi = sanitizeUserText(parts[1] || '');
+                     }
                      else { window.selectedQiraat = importedQiraatRawi; window.selectedRawi = ''; }
 
                     console.log("Successfully processed imported data.");

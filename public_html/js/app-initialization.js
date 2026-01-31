@@ -64,7 +64,7 @@ document.addEventListener('DOMContentLoaded', function() {
         audioFileInput.addEventListener('change', function(e) {
             if (e.target.files[0]) {
                 const file = e.target.files[0];
-                window.audioFileName = file.name;
+                window.audioFileName = sanitizeUserText(file.name);
                 if (fileNameDisplay) fileNameDisplay.textContent = window.audioFileName;
                 console.log(`Audio file selected: ${window.audioFileName}`);
 

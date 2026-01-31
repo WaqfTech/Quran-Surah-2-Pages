@@ -6,7 +6,7 @@ window.renderTimeline = function(audio, pagesArray) {
 
     // Clear timeline content and reset cursor
     if (timeline) {
-        timeline.innerHTML = "";
+        timeline.innerHTML = ""; // Clear previous segments and numbers
         timeline.style.cursor = 'default';
     } else {
         console.error("Timeline element not found.");
@@ -19,11 +19,19 @@ window.renderTimeline = function(audio, pagesArray) {
         return;
     }
 
-    // Create a sorted copy for rendering segments in correct visual order
-    const sortedPages = [...pagesArray].sort((a, b) => a.startTime - b.time); // Sort by start time
+    // Filter pages to only include those with valid numeric times
+    const validPages = pagesArray.filter(page =>
+        typeof page.startTime === 'number' && !isNaN(page.startTime) &&
+        typeof page.endTime === 'number' && !isNaN(page.endTime) &&
+        page.endTime >= page.startTime && // Ensure end is not before start
+        typeof page.page === 'number' // Ensure page number exists
+    );
+
+    // Sort by start time for correct visual order and overlap handling (if any)
+    const sortedPages = [...validPages].sort((a, b) => a.startTime - b.startTime);
 
     if (sortedPages.length === 0) {
-        console.log("Timeline render skipped: No pages to render.");
+        console.log("Timeline render skipped: No valid page segments with time data to render.");
         return; // Nothing to render
     }
 
@@ -31,44 +39,44 @@ window.renderTimeline = function(audio, pagesArray) {
     const duration = localAudio.duration;
 
     sortedPages.forEach((page) => {
-        // Use the explicit start and end times from the page object
-        const start = page.startTime || 0;
-        const end = page.endTime || 0;
+        const start = page.startTime;
+        const end = page.endTime;
 
-        // Validate times before calculating percentages
-        if (isNaN(start) || isNaN(end) || start < 0 || end < start || start >= duration) {
-             console.warn(`Skipping invalid segment for page ${page.page} (Surah ${page.surahNumber}): start=${start}, end=${end}, duration=${duration}`);
+        // Clamp end time to duration if it exceeds
+        const clampedEnd = Math.min(end, duration);
+
+        // Ensure start time is within duration as well
+        if (start >= duration) {
+             console.warn(`Skipping segment for page ${page.page} (Surah ${page.surahNumber}): start=${start} is beyond duration=${duration}`);
              return;
         }
 
-        // Clamp end time to duration if it exceeds (can happen with edits)
-        const clampedEnd = Math.min(end, duration);
-
         const segment = document.createElement("div");
-        segment.className = "timeline-segment"; // Use class from CSS
+        segment.className = "timeline-segment";
 
         const startPct = (start / duration) * 100;
-        // Ensure width calculation uses clamped end time and is not negative
         const widthPct = Math.max(0, ((clampedEnd - start) / duration) * 100);
 
-        // Final check on percentages before applying styles
-        if (isNaN(startPct) || isNaN(widthPct) || startPct > 100 || widthPct > 100 || widthPct < 0) {
-            console.warn(`Invalid percentage for page ${page.page}: startPct=${startPct}, widthPct=${widthPct}. Skipping segment.`);
+        // Final check on percentages
+        if (isNaN(startPct) || isNaN(widthPct) || startPct > 100 || widthPct <= 0) { // Segment needs some width
+            console.warn(`Invalid percentage/width for page ${page.page}: startPct=${startPct}, widthPct=${widthPct}. Skipping segment.`);
             return;
         }
 
         segment.style.left = `${startPct}%`;
         segment.style.width = `${widthPct}%`;
-
-        // Add hover title
         segment.title = `صفحة ${page.page} (سورة ${page.surahNumber})\n${page.startTimeFormatted} - ${page.endTimeFormatted}`;
 
-        // Click handler seeks to the START time of the segment
+        // --- ADD PAGE NUMBER ---
+        const pageNumberSpan = document.createElement("span");
+        pageNumberSpan.className = "timeline-page-number";
+        pageNumberSpan.textContent = page.page;
+        segment.appendChild(pageNumberSpan);
+        // --- END ADD PAGE NUMBER ---
+
         segment.addEventListener("click", () => {
             if (localAudio) {
                  localAudio.currentTime = start; // Seek to the start time of the segment
-                 // Optional: auto-play
-                 // localAudio.play().catch(e => console.error("Audio play failed:", e));
             }
         });
 

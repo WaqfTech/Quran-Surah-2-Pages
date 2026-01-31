@@ -48,7 +48,10 @@ function addResetButton() {
                 // Clear dynamic marking buttons
                 const pageMarkingContainer = document.getElementById('pageMarkingContainer');
                 if (pageMarkingContainer) {
-                    pageMarkingContainer.innerHTML = '<p>الرجاء اختيار السورة لعرض أزرار الصفحات.</p>';
+                    while (pageMarkingContainer.firstChild) pageMarkingContainer.removeChild(pageMarkingContainer.firstChild);
+                    const p = document.createElement('p');
+                    p.textContent = 'الرجاء اختيار السورة لعرض أزرار الصفحات.';
+                    pageMarkingContainer.appendChild(p);
                 }
 
                 // Update page list display (will show empty state)

@@ -145,18 +145,121 @@ function rebuildPageList() {
             // No action buttons for unmarked pages
         }
 
-        // --- Construct List Item HTML ---
-        li.innerHTML = `
-            <div class="page-info">
-                <span class="page-number">${pageNum}</span>
-            </div>
-            <div class="time-display inline-edit-container"> <!-- Container for time inputs/placeholders -->
-                ${timeDisplayHTML}
-            </div>
-            <div class="action-buttons">
-                 ${deleteButtonHTML} <!-- Only delete button shown -->
-            </div>
-        `;
+        // --- Construct List Item DOM safely ---
+        // Page info
+        const pageInfoDiv = document.createElement('div');
+        pageInfoDiv.className = 'page-info';
+        const pageNumberSpan = document.createElement('span');
+        pageNumberSpan.className = 'page-number';
+        pageNumberSpan.textContent = pageNum;
+        pageInfoDiv.appendChild(pageNumberSpan);
+        li.appendChild(pageInfoDiv);
+
+        // Time display container
+        const timeDisplayContainer = document.createElement('div');
+        timeDisplayContainer.className = 'time-display inline-edit-container';
+
+        if (markedPageData) {
+            // Start fieldset
+            const startFieldset = document.createElement('fieldset');
+            startFieldset.className = 'inline-time-fieldset start-time-fieldset';
+            startFieldset.title = 'وقت البدء';
+            const startLegend = document.createElement('legend');
+            startLegend.className = 'inline-fieldset-legend';
+            startLegend.textContent = 'وقت البدء';
+            startFieldset.appendChild(startLegend);
+            const startGroup = document.createElement('div');
+            startGroup.className = 'inline-time-edit-group';
+
+            // Helper to create a time component wrapper
+            const makeTimeComponent = (labelText, inputId, min, max, value, aria) => {
+                const wrapper = document.createElement('div');
+                wrapper.className = 'time-component-wrapper';
+                const label = document.createElement('label');
+                label.className = 'component-label';
+                label.setAttribute('for', inputId);
+                label.textContent = labelText;
+                const input = document.createElement('input');
+                input.type = 'number';
+                input.className = 'inline-time-input';
+                input.id = inputId;
+                if (min !== undefined) input.min = min;
+                if (max !== undefined) input.max = max;
+                input.value = value;
+                input.setAttribute('aria-label', aria);
+                wrapper.appendChild(label);
+                wrapper.appendChild(input);
+                return wrapper;
+            };
+
+            startGroup.appendChild(makeTimeComponent('دقائق', startMinId, 0, undefined, startComponents.minutes, `دقائق البدء لصفحة ${pageNum}`));
+            startGroup.appendChild(makeTimeComponent('ثواني', startSecId, 0, 59, startComponents.seconds, `ثواني البدء لصفحة ${pageNum}`));
+            startGroup.appendChild(makeTimeComponent('أجزاء', startMsId, 0, 999, startComponents.milliseconds, `أجزاء الثانية للبدء لصفحة ${pageNum}`));
+            startFieldset.appendChild(startGroup);
+            timeDisplayContainer.appendChild(startFieldset);
+
+            // End fieldset
+            const endFieldset = document.createElement('fieldset');
+            endFieldset.className = 'inline-time-fieldset end-time-fieldset';
+            endFieldset.title = 'وقت الانتهاء';
+            const endLegend = document.createElement('legend');
+            endLegend.className = 'inline-fieldset-legend';
+            endLegend.textContent = 'وقت الانتهاء';
+            endFieldset.appendChild(endLegend);
+            const endGroup = document.createElement('div');
+            endGroup.className = 'inline-time-edit-group';
+
+            endGroup.appendChild(makeTimeComponent('دقائق', endMinId, 0, undefined, endComponents.minutes, `دقائق الانتهاء لصفحة ${pageNum}`));
+            endGroup.appendChild(makeTimeComponent('ثواني', endSecId, 0, 59, endComponents.seconds, `ثواني الانتهاء لصفحة ${pageNum}`));
+            endGroup.appendChild(makeTimeComponent('أجزاء', endMsId, 0, 999, endComponents.milliseconds, `أجزاء الثانية للانتهاء لصفحة ${pageNum}`));
+            endFieldset.appendChild(endGroup);
+            timeDisplayContainer.appendChild(endFieldset);
+
+            // Error placeholder
+            const errorDiv = document.createElement('div');
+            errorDiv.className = 'list-item-error-message';
+            errorDiv.dataset.page = pageNum;
+            errorDiv.dataset.surah = selectedSurahNumber;
+            timeDisplayContainer.appendChild(errorDiv);
+
+        } else {
+            const ph1 = document.createElement('div');
+            ph1.className = 'time-placeholder-group';
+            const lbl1 = document.createElement('span'); lbl1.className = 'placeholder-label'; lbl1.textContent = 'وقت البدء:';
+            const val1 = document.createElement('span'); val1.className = 'time-placeholder start-time'; val1.textContent = '--:--.---';
+            ph1.appendChild(lbl1); ph1.appendChild(val1);
+
+            const ph2 = document.createElement('div');
+            ph2.className = 'time-placeholder-group';
+            const lbl2 = document.createElement('span'); lbl2.className = 'placeholder-label'; lbl2.textContent = 'وقت الانتهاء:';
+            const val2 = document.createElement('span'); val2.className = 'time-placeholder end-time'; val2.textContent = '--:--.---';
+            ph2.appendChild(lbl2); ph2.appendChild(val2);
+
+            timeDisplayContainer.appendChild(ph1);
+            timeDisplayContainer.appendChild(ph2);
+        }
+
+        li.appendChild(timeDisplayContainer);
+
+        // Action buttons
+        const actionDiv = document.createElement('div');
+        actionDiv.className = 'action-buttons';
+        if (markedPageData) {
+            const deleteBtn = document.createElement('button');
+            deleteBtn.className = 'delete-btn';
+            deleteBtn.dataset.page = pageNum;
+            deleteBtn.dataset.surah = selectedSurahNumber;
+            deleteBtn.title = 'حذف علامة هذه الصفحة';
+            // SVG is static and safe
+            deleteBtn.innerHTML = `
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M3 6h18"></path><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6"></path><path d="M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line>
+                </svg>
+            `;
+            actionDiv.appendChild(deleteBtn);
+        }
+
+        li.appendChild(actionDiv);
         pageList.appendChild(li);
     }
 

@@ -57,11 +57,9 @@ function loadFromLocalStorage() {
                  window.selectedRawi = '';
              }
 
-            // --- Update UI Elements (Done in app-initialization.js after this runs) ---
+            // --- UI Elements will be updated in app-initialization.js after this runs ---
 
-            // Save the potentially migrated/validated data back? Optional.
-            // saveToLocalStorage();
-
+            console.log("Successfully loaded and parsed data from localStorage.");
             // Return true to indicate data was loaded
             return true;
 
@@ -69,10 +67,17 @@ function loadFromLocalStorage() {
             console.error("Error parsing data from localStorage:", e);
             localStorage.removeItem('quranPageMarker'); // Clear corrupted data
             // Reset to default state
-             window.pages = []; window.currentSurah = ''; /* etc. */
+             window.pages = [];
+             window.currentSurah = '';
+             window.audioFileName = '';
+             window.reciterName = '';
+             window.selectedQiraat = '';
+             window.selectedRawi = '';
+             console.log("Cleared corrupted localStorage data and reset state.");
              return false;
         }
     }
     // Return false if no data was found
+    console.log("No data found in localStorage.");
     return false;
 }

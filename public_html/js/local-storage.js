@@ -45,13 +45,15 @@ function loadFromLocalStorage() {
             })).filter(p => p.page > 0 && p.surahNumber > 0); // Filter invalid entries
 
             window.currentSurah = data.currentSurah || ''; // Surah number string
-            window.audioFileName = data.audioFileName || '';
-            window.reciterName = data.reciterName || ''; // Load directly from main data
-            const loadedQiraatRawi = data.selectedQiraat || '';
+            window.audioFileName = sanitizeUserText(data.audioFileName || '');
+            window.reciterName = sanitizeUserText(data.reciterName || ''); // Load directly from main data
+            const loadedQiraatRawi = sanitizeUserText(data.selectedQiraat || '');
 
-             // Set global qiraat/rawi variables from combined string
+             // Set global qiraat/rawi variables from combined string (sanitized)
              if (loadedQiraatRawi.includes(' - ')) {
-                 [window.selectedQiraat, window.selectedRawi] = loadedQiraatRawi.split(' - ');
+                 const parts = loadedQiraatRawi.split(' - ');
+                 window.selectedQiraat = sanitizeUserText(parts[0] || '');
+                 window.selectedRawi = sanitizeUserText(parts[1] || '');
              } else {
                  window.selectedQiraat = loadedQiraatRawi;
                  window.selectedRawi = '';

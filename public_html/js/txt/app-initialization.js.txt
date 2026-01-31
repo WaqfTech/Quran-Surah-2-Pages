@@ -1,12 +1,11 @@
 // js/app-initialization.js
 
 // Define global state variables *before* DOMContentLoaded
-// Use `window.` to ensure they are truly global if accessed across files without modules
-window.pageCounter = 1; // May not be used for marking, but keep for compatibility
+window.pageCounter = 1;
 window.pages = [];
-window.currentSurah = ''; // Stores selected Surah number as string
+window.currentSurah = '';
 window.audioFileName = '';
-window.editingPageIndex = -1; // Consider if this global is still needed or managed by time-editing.js
+window.editingPageIndex = -1; // Still used by inline edit logic? No, can be removed if desired. Let's keep for now in case of future use.
 window.reciterName = '';
 window.selectedQiraat = '';
 window.selectedRawi = '';
@@ -19,107 +18,154 @@ document.addEventListener('DOMContentLoaded', function() {
     let dataLoaded = false;
     if (typeof loadFromLocalStorage === 'function') {
         dataLoaded = loadFromLocalStorage();
-        if(dataLoaded) {
-             console.log("State loaded from localStorage.");
-        } else {
-             console.log("No valid state found in localStorage or loading failed.");
-             // Ensure defaults are set if loading fails
-             window.pages = []; window.currentSurah = ''; /* reset others */
-        }
-    } else {
-        console.error("loadFromLocalStorage function not found. State not loaded.");
-    }
+        if(dataLoaded) { console.log("State successfully loaded from localStorage."); }
+        else { console.log("No valid state found in localStorage or loading failed. Using defaults."); }
+    } else { console.error("loadFromLocalStorage function not found. State not loaded."); }
 
-    // 2. Setup UI components (dropdowns, input fields, etc.)
-    // These functions should now correctly populate based on the globally set variables loaded above
+    // 2. Setup UI components (dropdowns, input fields, audio display, reset button)
     if (typeof setupSurahDropdown === 'function') setupSurahDropdown(); else console.error("setupSurahDropdown not found.");
     if (typeof addReciterInput === 'function') addReciterInput(); else console.error("addReciterInput not found.");
     if (typeof setupQiraatDropdown === 'function') setupQiraatDropdown(); else console.error("setupQiraatDropdown not found.");
-    if (typeof setupAudioTimeDisplay === 'function') setupAudioTimeDisplay(); else console.error("setupAudioTimeDisplay not found.");
+    if (typeof setupAudioTimeDisplay === 'function') setupAudioTimeDisplay(); else console.error("setupAudioTimeDisplay not found."); // Sets up time/duration/seeker AND info display
     if (typeof addResetButton === 'function') addResetButton(); else console.error("addResetButton not found.");
 
-    // 3. Restore UI values AFTER dropdowns are populated
+    // 3. Restore UI *values* AFTER dropdowns/inputs are populated/created and globals are loaded
      const surahSelect = document.getElementById('surahSelect');
-     if (surahSelect && window.currentSurah) surahSelect.value = window.currentSurah;
-
+     if (surahSelect && window.currentSurah) {
+         surahSelect.value = window.currentSurah;
+         console.log(`Restored Surah dropdown to: ${window.currentSurah}`);
+     }
      const reciterInput = document.getElementById('reciterInput');
-     if (reciterInput && window.reciterName) reciterInput.value = window.reciterName;
-
+     if (reciterInput && window.reciterName) {
+         reciterInput.value = window.reciterName;
+         console.log(`Restored Reciter input to: ${window.reciterName}`);
+     }
      const qiraatSelect = document.getElementById('qiraatSelect');
      if (qiraatSelect) {
          const qiraatValueToSet = (window.selectedQiraat && window.selectedRawi)
                                 ? `${window.selectedQiraat} - ${window.selectedRawi}`
                                 : window.selectedQiraat || '';
-         qiraatSelect.value = qiraatValueToSet;
+         if (qiraatValueToSet) {
+             qiraatSelect.value = qiraatValueToSet;
+             console.log(`Restored Qiraat dropdown to: ${qiraatValueToSet}`);
+         }
      }
-
      const fileNameDisplay = document.getElementById('fileName');
-     if (fileNameDisplay && window.audioFileName) fileNameDisplay.textContent = window.audioFileName;
+     if (fileNameDisplay) {
+         fileNameDisplay.textContent = window.audioFileName || 'لم يتم تحميل ملف صوتي';
+     }
+     // Update the info display initially based on loaded data
+     if(typeof window.updateAudioInfoDisplay === 'function') window.updateAudioInfoDisplay();
 
 
-    // 4. Handle Audio File Input
+    // 4. Handle Audio File Input Selection by User
     const audioFileInput = document.getElementById('audioFile');
     if (audioFileInput) {
         audioFileInput.addEventListener('change', function(e) {
             if (e.target.files[0]) {
-                window.audioFileName = e.target.files[0].name;
+                const file = e.target.files[0];
+                window.audioFileName = file.name;
                 if (fileNameDisplay) fileNameDisplay.textContent = window.audioFileName;
+                console.log(`Audio file selected: ${window.audioFileName}`);
 
                 const audio = document.getElementById('audio');
                 if (audio) {
-                    const fileURL = URL.createObjectURL(e.target.files[0]);
-                    audio.src = fileURL;
-                    audio.load(); // Explicitly load the new source
-                }
+                    try {
+                        const fileURL = URL.createObjectURL(file);
+                         const previousUrl = audio.getAttribute('src');
+                         if (previousUrl && previousUrl.startsWith('blob:')) {
+                             URL.revokeObjectURL(previousUrl);
+                             console.log("Revoked previous audio blob URL.");
+                         }
+                         audio.src = fileURL;
+                         audio.load(); // Explicitly load the new source
+                         console.log("New audio source set and loading.");
+                    } catch (error) {
+                        console.error("Error creating object URL for audio file:", error);
+                        alert("حدث خطأ أثناء محاولة تحميل الملف الصوتي.");
+                         if (fileNameDisplay) fileNameDisplay.textContent = 'خطأ في تحميل الملف';
+                         window.audioFileName = '';
+                         if(typeof window.updateAudioInfoDisplay === 'function') window.updateAudioInfoDisplay(); // Update display on error too
+                    }
+                } else { console.error("Audio element not found when handling file input."); }
 
-                // Reset pages when new audio is loaded? Depends on desired workflow.
-                 // window.pages = [];
-                 // if (typeof rebuildPageList === 'function') rebuildPageList();
-                 // if (typeof window.renderTimeline === 'function' && audio) window.renderTimeline(audio, window.pages);
-
-
+                // Save the state (at least the new filename)
                 if (typeof saveToLocalStorage === 'function') saveToLocalStorage();
+                 // Update info display after loading new file name
+                 if(typeof window.updateAudioInfoDisplay === 'function') window.updateAudioInfoDisplay();
+
             }
         });
-    } else {
-        console.error("Audio file input element not found.");
-    }
+    } else { console.error("Audio file input element (#audioFile) not found."); }
 
-    // 5. Initial UI updates based on potentially loaded data
+    // 5. Setup Seek Button Listeners
+    const seekButtons = [
+        { id: 'seekBackward10', seconds: -10 },
+        { id: 'seekBackward5', seconds: -5 },
+        { id: 'seekForward5', seconds: 5 },
+        { id: 'seekForward10', seconds: 10 },
+    ];
+    seekButtons.forEach(buttonInfo => {
+        const button = document.getElementById(buttonInfo.id);
+        if (button && typeof window.seekAudio === 'function') {
+            button.addEventListener('click', () => window.seekAudio(buttonInfo.seconds));
+        } else if (!button) {
+            console.warn(`Seek button with ID "${buttonInfo.id}" not found.`);
+        } else {
+             console.error(`seekAudio function not found.`);
+        }
+    });
+
+
+    // 6. Initial Page List Build
     if (typeof rebuildPageList === 'function') {
-        rebuildPageList(); // Display loaded pages in the list
-    } else {
-        console.error("rebuildPageList function not found.");
-    }
+        console.log("Performing initial page list build.");
+        rebuildPageList();
+    } else { console.error("rebuildPageList function not found during initialization."); }
 
-    // 6. Trigger dynamic buttons AFTER dropdowns populated AND value potentially set
+    // 7. Trigger Dynamic Button Generation and Initial Timeline Render
     if (surahSelect && window.currentSurah && window.currentSurah !== "") {
-         console.log(`Triggering 'change' for Surah ${window.currentSurah} to generate buttons.`);
-         surahSelect.dispatchEvent(new Event('change')); // This calls generateButtons in dynamic-page-buttons.js
+         console.log(`Initial load: Triggering 'change' handlers for Surah ${window.currentSurah}.`);
+         surahSelect.dispatchEvent(new Event('change'));
+    } else {
+         console.log("Initial load: No Surah selected, skipping initial 'change' event dispatch.");
+         if (typeof rebuildPageList === 'function') rebuildPageList();
     }
 
-
-    // 7. Render timeline if audio source potentially set and pages exist
+    // 8. Initial Timeline Render Attempt
     const audio = document.getElementById('audio');
      if (audio && typeof window.renderTimeline === 'function') {
           const tryRenderTimeline = () => {
-               if(audio.readyState >= 1) { // HAVE_METADATA
+               if (audio.readyState >= 1 && !isNaN(audio.duration) && audio.duration > 0 && window.pages && window.pages.length > 0) {
+                   console.log("Attempting initial timeline render.");
                    window.renderTimeline(audio, window.pages);
-               } else if (audio.src && !audio.error) { // Check src and no error state
-                   audio.addEventListener('loadedmetadata', () => window.renderTimeline(audio, window.pages), { once: true });
-                   audio.addEventListener('error', (e) => console.error("Audio error on load for timeline:", e), { once: true });
+               } else if (audio.src && audio.readyState < 1) {
+                    console.log("Audio src set but not ready, adding listener for loadedmetadata to render timeline.");
+                    audio.addEventListener('loadedmetadata', () => {
+                        if (window.pages && window.pages.length > 0) {
+                             console.log("Rendering timeline after loadedmetadata event.");
+                            window.renderTimeline(audio, window.pages);
+                        }
+                    }, { once: true });
+                    audio.addEventListener('error', (e) => console.error("Audio error on initial load:", e), { once: true });
                } else {
-                   console.log("Timeline not rendered initially: No src or audio not ready.");
+                   console.log("Initial timeline not rendered: Audio not ready or no pages data.");
+                   window.renderTimeline(null, []);
                }
            };
-           // Use setTimeout to ensure DOM updates from dropdowns etc. are processed
-           setTimeout(tryRenderTimeline, 50);
-       } else {
-           console.error("renderTimeline function or audio element not found.");
-       }
+           setTimeout(tryRenderTimeline, 100);
+       } else { console.error("renderTimeline function or audio element not found during initialization."); }
 
        console.log("Application initialization complete.");
 });
 
-// Ensure helper formatTimeWithMs is defined globally or loaded before needed
-// (It's defined in audio-handling.js, ensure loading order is correct in HTML)
+// Global helper function check
+if (typeof formatTimeWithMs !== 'function') {
+    console.error("FATAL: formatTimeWithMs function is not defined. Check script loading order.");
+}
+if (typeof window.updateAudioInfoDisplay !== 'function') {
+     console.error("FATAL: updateAudioInfoDisplay function is not defined. Check script loading order.");
+}
+if (typeof window.seekAudio !== 'function') {
+     console.error("FATAL: seekAudio function is not defined. Check script loading order.");
+}
